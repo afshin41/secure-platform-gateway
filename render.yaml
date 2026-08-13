@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: secure-platform-gateway
+    runtime: node
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: NODE_TTL
+        value: "120"
+      - key: SESSION_TTL
+        value: "300"
+      - key: MAX_NODES
+        value: "10000"
+      - key: MAX_SESSIONS
+        value: "10000"
+      - key: MAX_MESSAGE_BYTES
+        value: "1048576"

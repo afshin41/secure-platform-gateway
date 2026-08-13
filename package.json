@@ -1,0 +1,16 @@
+{
+  "name": "secure-platform-gateway",
+  "version": "1.0.0",
+  "description": "Secure Platform Gateway - Initial Connection and Signaling Layer",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}
