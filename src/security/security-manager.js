@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 
 import { TokenRevocationManager } from "./token-revocation-manager.js";
+import { SecurityStateManager } from "./security-state-manager.js";
 
 export class SecurityManager {
     constructor(config) {
@@ -13,6 +14,9 @@ export class SecurityManager {
 
         this.revocationManager =
             new TokenRevocationManager();
+
+        this.stateManager =
+            new SecurityStateManager();
     }
 
     validateEnrollmentToken(token) {
@@ -97,6 +101,11 @@ export class SecurityManager {
             }
         );
 
+        this.stateManager.setState(
+            nodeId,
+            "authenticated"
+        );
+
         return {
             accessToken,
             issuedAt
@@ -162,10 +171,19 @@ export class SecurityManager {
         this.authenticatedNodes.delete(
             nodeId
         );
+
+        this.stateManager.setState(
+            nodeId,
+            "revoked"
+        );
     }
 
     restoreNode(nodeId) {
         this.revocationManager.restore(
+            nodeId
+        );
+
+        this.stateManager.removeState(
             nodeId
         );
     }
@@ -173,6 +191,7 @@ export class SecurityManager {
     revokeAll() {
         this.revocationManager.clear();
         this.authenticatedNodes.clear();
+        this.stateManager.clear();
     }
 
     count() {
@@ -181,6 +200,12 @@ export class SecurityManager {
 
     isRevoked(nodeId) {
         return this.revocationManager.isRevoked(
+            nodeId
+        );
+    }
+
+    getSecurityState(nodeId) {
+        return this.stateManager.getState(
             nodeId
         );
     }
