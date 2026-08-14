@@ -7,16 +7,17 @@ export class SecurityInputValidator {
         this.config = config;
 
         this.maxNodeIdLength = 128;
+        this.maxTokenLength = 512;
         this.maxSessionIdLength = 128;
         this.maxSignalTypeLength = 128;
-        this.maxTokenLength = 512;
-        this.maxStringLength = 4096;
+        this.maxDeviceNameLength = 256;
+        this.maxNodeTypeLength = 128;
     }
 
     requireString(
         value,
-        name,
-        maxLength = this.maxStringLength
+        field,
+        maxLength
     ) {
         if (
             typeof value !== "string" ||
@@ -24,113 +25,203 @@ export class SecurityInputValidator {
             value.length > maxLength
         ) {
             throw new Error(
-                `invalid_${name}`
+                `invalid_${field}`
             );
         }
 
         return value;
     }
 
-    nodeId(value) {
+    validateNodeId(nodeId) {
         return this.requireString(
-            value,
+            nodeId,
             "node_id",
             this.maxNodeIdLength
         );
     }
 
-    sessionId(value) {
+    validateAccessToken(accessToken) {
         return this.requireString(
-            value,
-            "session_id",
-            this.maxSessionIdLength
-        );
-    }
-
-    accessToken(value) {
-        return this.requireString(
-            value,
+            accessToken,
             "access_token",
             this.maxTokenLength
         );
     }
 
-    enrollmentToken(value) {
+    validateEnrollmentToken(
+        enrollmentToken
+    ) {
         return this.requireString(
-            value,
+            enrollmentToken,
             "enrollment_token",
             this.maxTokenLength
         );
     }
 
-    signalType(value) {
+    validateSessionId(sessionId) {
         return this.requireString(
-            value,
+            sessionId,
+            "session_id",
+            this.maxSessionIdLength
+        );
+    }
+
+    validateSignalType(signalType) {
+        return this.requireString(
+            signalType,
             "signal_type",
             this.maxSignalTypeLength
         );
     }
 
-    deviceName(value) {
-        if (value === undefined || value === null) {
+    validateDeviceName(deviceName) {
+        if (
+            deviceName === undefined ||
+            deviceName === null
+        ) {
             return "";
         }
 
         return this.requireString(
-            value,
+            deviceName,
             "device_name",
-            this.maxStringLength
+            this.maxDeviceNameLength
         );
     }
 
-    nodeType(value) {
-        if (value === undefined || value === null) {
+    validateNodeType(nodeType) {
+        if (
+            nodeType === undefined ||
+            nodeType === null
+        ) {
             return "device";
         }
 
         return this.requireString(
-            value,
+            nodeType,
             "node_type",
-            128
+            this.maxNodeTypeLength
         );
     }
 
-    signalPayload(value) {
+    validateSessionTarget(targetNodeId) {
+        return this.validateNodeId(
+            targetNodeId
+        );
+    }
+
+    validateSignalPayload(payload) {
         if (
-            value === undefined ||
-            value === null
+            payload === undefined ||
+            payload === null
         ) {
             throw new Error(
                 "invalid_signal_payload"
             );
         }
 
+        return payload;
+    }
+
+    validateNodeRegistration(payload) {
         if (
-            typeof value !== "object" &&
-            typeof value !== "string" &&
-            typeof value !== "number" &&
-            typeof value !== "boolean"
+            !payload ||
+            typeof payload !== "object" ||
+            Array.isArray(payload)
         ) {
             throw new Error(
-                "invalid_signal_payload"
+                "invalid_node_registration"
             );
         }
 
-        return value;
+        return {
+            nodeId: this.validateNodeId(
+                payload.node_id
+            ),
+
+            deviceName:
+                this.validateDeviceName(
+                    payload.device_name
+                ),
+
+            nodeType:
+                this.validateNodeType(
+                    payload.node_type
+                )
+        };
     }
 
-    requestId(value) {
+    validateSessionCreation(payload) {
         if (
-            value === undefined ||
-            value === null
+            !payload ||
+            typeof payload !== "object" ||
+            Array.isArray(payload)
         ) {
-            return null;
+            throw new Error(
+                "invalid_session_creation"
+            );
         }
 
-        return this.requireString(
-            value,
-            "request_id",
-            128
-        );
+        return {
+            target:
+                this.validateSessionTarget(
+                    payload.target
+                )
+        };
+    }
+
+    validateSessionState(payload) {
+        if (
+            !payload ||
+            typeof payload !== "object" ||
+            Array.isArray(payload)
+        ) {
+            throw new Error(
+                "invalid_session_state"
+            );
+        }
+
+        return {
+            sessionId:
+                this.validateSessionId(
+                    payload.session_id
+                ),
+
+            state:
+                this.requireString(
+                    payload.state,
+                    "session_state",
+                    64
+                )
+        };
+    }
+
+    validateSignal(payload) {
+        if (
+            !payload ||
+            typeof payload !== "object" ||
+            Array.isArray(payload)
+        ) {
+            throw new Error(
+                "invalid_signal"
+            );
+        }
+
+        return {
+            sessionId:
+                this.validateSessionId(
+                    payload.session_id
+                ),
+
+            signalType:
+                this.validateSignalType(
+                    payload.signal_type
+                ),
+
+            payload:
+                this.validateSignalPayload(
+                    payload.payload
+                )
+        };
     }
 }
