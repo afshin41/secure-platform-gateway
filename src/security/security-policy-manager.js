@@ -9,33 +9,16 @@ export class SecurityPolicyManager {
         this.policies = Object.freeze({
             authenticationRequired: true,
             accessTokenRequired: true,
+            registeredNodeRequired: true,
             sessionAuthorizationRequired: true,
             signalingAuthorizationRequired: true,
-            selfSessionForbidden: true,
-            unregisteredNodeForbidden: true
+            selfSessionForbidden: true
         });
-    }
-
-    getPolicy(name) {
-        if (
-            typeof name !== "string" ||
-            name.length === 0
-        ) {
-            throw new Error("invalid_policy_name");
-        }
-
-        if (!(name in this.policies)) {
-            throw new Error("unknown_security_policy");
-        }
-
-        return this.policies[name];
     }
 
     requireAuthentication() {
         if (!this.policies.authenticationRequired) {
-            throw new Error(
-                "authentication_policy_disabled"
-            );
+            return true;
         }
 
         return true;
@@ -43,42 +26,30 @@ export class SecurityPolicyManager {
 
     requireAccessToken() {
         if (!this.policies.accessTokenRequired) {
-            throw new Error(
-                "access_token_policy_disabled"
-            );
-        }
-
-        return true;
-    }
-
-    requireSessionAuthorization() {
-        if (
-            !this.policies.sessionAuthorizationRequired
-        ) {
-            throw new Error(
-                "session_authorization_policy_disabled"
-            );
-        }
-
-        return true;
-    }
-
-    requireSignalingAuthorization() {
-        if (
-            !this.policies.signalingAuthorizationRequired
-        ) {
-            throw new Error(
-                "signaling_authorization_policy_disabled"
-            );
+            return true;
         }
 
         return true;
     }
 
     requireRegisteredNode() {
-        if (
-            !this.policies.unregisteredNodeForbidden
-        ) {
+        if (!this.policies.registeredNodeRequired) {
+            return true;
+        }
+
+        return true;
+    }
+
+    requireSessionAuthorization() {
+        if (!this.policies.sessionAuthorizationRequired) {
+            return true;
+        }
+
+        return true;
+    }
+
+    requireSignalingAuthorization() {
+        if (!this.policies.signalingAuthorizationRequired) {
             return true;
         }
 
@@ -86,31 +57,31 @@ export class SecurityPolicyManager {
     }
 
     preventSelfSession(
-        initiatorNodeId,
+        nodeId,
         targetNodeId
     ) {
         if (
-            typeof initiatorNodeId !== "string" ||
+            typeof nodeId !== "string" ||
             typeof targetNodeId !== "string"
         ) {
             throw new Error(
-                "invalid_node_id"
+                "invalid_session_participants"
             );
         }
 
         if (
             this.policies.selfSessionForbidden &&
-            initiatorNodeId === targetNodeId
+            nodeId === targetNodeId
         ) {
             throw new Error(
-                "invalid_self_session"
+                "self_session_forbidden"
             );
         }
 
         return true;
     }
 
-    getAllPolicies() {
+    getPolicies() {
         return {
             ...this.policies
         };
