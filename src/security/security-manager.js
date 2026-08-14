@@ -1,12 +1,18 @@
 import crypto from "node:crypto";
 
+import { TokenRevocationManager } from "./token-revocation-manager.js";
+
 export class SecurityManager {
     constructor(config) {
         this.config = config;
+
         this.enrollmentToken =
             process.env.GATEWAY_ENROLLMENT_TOKEN || "";
 
         this.authenticatedNodes = new Map();
+
+        this.revocationManager =
+            new TokenRevocationManager();
     }
 
     validateEnrollmentToken(token) {
@@ -38,7 +44,9 @@ export class SecurityManager {
     }
 
     generateAccessToken() {
-        return crypto.randomBytes(32).toString("base64url");
+        return crypto
+            .randomBytes(32)
+            .toString("base64url");
     }
 
     hashToken(token) {
@@ -54,6 +62,12 @@ export class SecurityManager {
             nodeId.length === 0
         ) {
             throw new Error("invalid_node_id");
+        }
+
+        if (
+            this.revocationManager.isRevoked(nodeId)
+        ) {
+            throw new Error("node_revoked");
         }
 
         if (
@@ -98,6 +112,12 @@ export class SecurityManager {
             return false;
         }
 
+        if (
+            this.revocationManager.isRevoked(nodeId)
+        ) {
+            return false;
+        }
+
         const record =
             this.authenticatedNodes.get(nodeId);
 
@@ -130,15 +150,38 @@ export class SecurityManager {
         );
     }
 
-    revokeNode(nodeId) {
-        this.authenticatedNodes.delete(nodeId);
+    revokeNode(
+        nodeId,
+        reason = "manual"
+    ) {
+        this.revocationManager.revoke(
+            nodeId,
+            reason
+        );
+
+        this.authenticatedNodes.delete(
+            nodeId
+        );
+    }
+
+    restoreNode(nodeId) {
+        this.revocationManager.restore(
+            nodeId
+        );
     }
 
     revokeAll() {
+        this.revocationManager.clear();
         this.authenticatedNodes.clear();
     }
 
     count() {
         return this.authenticatedNodes.size;
+    }
+
+    isRevoked(nodeId) {
+        return this.revocationManager.isRevoked(
+            nodeId
+        );
     }
 }
