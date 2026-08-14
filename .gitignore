@@ -12,3 +12,4 @@ gateway.log
 gateway.log
 gateway-test.log
 gateway-security-test.log
+gateway-config-integration.log

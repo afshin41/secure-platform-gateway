@@ -1,6 +1,7 @@
 import http from "node:http";
 
 import { config } from "./config/config.js";
+import { validateConfig } from "./config/config-validator.js";
 import { createHealthHandler } from "./http/health.js";
 import { SessionManager } from "./sessions/session-manager.js";
 import { SignalingService } from "./signaling/signaling-service.js";
@@ -8,6 +9,8 @@ import { PlatformWebSocketServer } from "./websocket/websocket-server.js";
 import {
     createSecurityIntegration
 } from "./security/security-integration.js";
+
+validateConfig(config);
 
 const sessionManager =
     new SessionManager(config);
