@@ -5,94 +5,90 @@ export class SecurityRateLimiter {
         }
 
         this.config = config;
-        this.buckets = new Map();
-
-        this.maxAttempts =
-            Number.isInteger(config.maxAuthAttempts) &&
-            config.maxAuthAttempts > 0
-                ? config.maxAuthAttempts
-                : 10;
 
         this.windowMs =
-            Number.isInteger(config.authRateWindowMs) &&
-            config.authRateWindowMs > 0
-                ? config.authRateWindowMs
-                : 60000;
+            Number.isInteger(
+                config.securityRateWindowMs
+            ) &&
+            config.securityRateWindowMs > 0
+                ? config.securityRateWindowMs
+                : 60 * 1000;
+
+        this.maxRequests =
+            Number.isInteger(
+                config.securityRateMaxRequests
+            ) &&
+            config.securityRateMaxRequests > 0
+                ? config.securityRateMaxRequests
+                : 100;
+
+        this.entries = new Map();
     }
 
-    cleanup(now = Date.now()) {
-        for (const [key, bucket] of this.buckets) {
+    cleanup() {
+        const now = Date.now();
+
+        for (
+            const [key, entry]
+            of this.entries
+        ) {
             if (
-                now - bucket.windowStart >=
-                this.windowMs
+                entry.expiresAt <= now
             ) {
-                this.buckets.delete(key);
+                this.entries.delete(key);
             }
         }
     }
 
-    check(key) {
+    consume(key) {
         if (
             typeof key !== "string" ||
             key.length === 0
         ) {
-            throw new Error("invalid_rate_limit_key");
+            throw new Error(
+                "invalid_rate_limit_key"
+            );
         }
+
+        this.cleanup();
 
         const now = Date.now();
 
-        this.cleanup(now);
+        let entry =
+            this.entries.get(key);
 
-        let bucket = this.buckets.get(key);
-
-        if (!bucket) {
-            bucket = {
+        if (!entry) {
+            entry = {
                 count: 0,
-                windowStart: now
+                expiresAt:
+                    now + this.windowMs
             };
 
-            this.buckets.set(key, bucket);
+            this.entries.set(
+                key,
+                entry
+            );
         }
 
         if (
-            now - bucket.windowStart >=
-            this.windowMs
+            entry.count >=
+            this.maxRequests
         ) {
-            bucket.count = 0;
-            bucket.windowStart = now;
-        }
-
-        if (bucket.count >= this.maxAttempts) {
-            return {
-                allowed: false,
-                remaining: 0,
-                retryAfterMs:
-                    this.windowMs -
-                    (now - bucket.windowStart)
-            };
-        }
-
-        bucket.count += 1;
-
-        return {
-            allowed: true,
-            remaining:
-                this.maxAttempts -
-                bucket.count,
-            retryAfterMs: 0
-        };
-    }
-
-    consume(key) {
-        const result = this.check(key);
-
-        if (!result.allowed) {
             throw new Error(
                 "rate_limit_exceeded"
             );
         }
 
-        return result;
+        entry.count += 1;
+
+        return {
+            allowed: true,
+            remaining:
+                this.maxRequests -
+                entry.count,
+            expiresAt:
+                entry.expiresAt
+        };
     }
 
     reset(key) {
@@ -100,19 +96,20 @@ export class SecurityRateLimiter {
             typeof key !== "string" ||
             key.length === 0
         ) {
-            throw new Error("invalid_rate_limit_key");
+            throw new Error(
+                "invalid_rate_limit_key"
+            );
         }
 
-        this.buckets.delete(key);
+        this.entries.delete(key);
     }
 
-    resetAll() {
-        this.buckets.clear();
+    clear() {
+        this.entries.clear();
     }
 
-    size() {
+    count() {
         this.cleanup();
-
-        return this.buckets.size;
+        return this.entries.size;
     }
 }
