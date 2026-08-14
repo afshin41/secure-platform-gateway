@@ -13,11 +13,13 @@ export class PlatformWebSocketServer {
         server,
         config,
         sessionManager,
-        signalingService
+        signalingService,
+        security
     ) {
         this.config = config;
         this.sessionManager = sessionManager;
         this.signalingService = signalingService;
+        this.security = security;
 
         this.nodes = new Map();
 
@@ -34,6 +36,7 @@ export class PlatformWebSocketServer {
 
     handleConnection(socket) {
         socket.nodeId = null;
+        socket.accessToken = null;
 
         socket.on("message", raw => {
             this.handleMessage(socket, raw);
@@ -52,7 +55,9 @@ export class PlatformWebSocketServer {
         let message;
 
         try {
-            message = parseMessage(raw.toString());
+            message = parseMessage(
+                raw.toString()
+            );
         } catch (error) {
             this.send(
                 socket,
@@ -67,33 +72,66 @@ export class PlatformWebSocketServer {
         }
 
         try {
+            if (
+                message.request_id !== null &&
+                message.request_id !== undefined
+            ) {
+                this.security.gatewayGuard
+                    .validateRequest(
+                        message.request_id,
+                        socket.nodeId ||
+                            `anonymous:${socket._socket?.remoteAddress || "unknown"}`
+                    );
+            }
+
             switch (message.type) {
                 case MESSAGE_TYPES.NODE_REGISTER:
-                    this.registerNode(socket, message);
+                    this.registerNode(
+                        socket,
+                        message
+                    );
                     break;
 
                 case MESSAGE_TYPES.NODE_REFRESH:
-                    this.refreshNode(socket, message);
+                    this.refreshNode(
+                        socket,
+                        message
+                    );
                     break;
 
                 case MESSAGE_TYPES.SESSION_CREATE:
-                    this.createSession(socket, message);
+                    this.createSession(
+                        socket,
+                        message
+                    );
                     break;
 
                 case MESSAGE_TYPES.SESSION_STATE:
-                    this.updateSessionState(socket, message);
+                    this.updateSessionState(
+                        socket,
+                        message
+                    );
                     break;
 
                 case MESSAGE_TYPES.SESSION_CLOSE:
-                    this.closeSession(socket, message);
+                    this.closeSession(
+                        socket,
+                        message
+                    );
                     break;
 
                 case MESSAGE_TYPES.SIGNAL_SEND:
-                    this.sendSignal(socket, message);
+                    this.sendSignal(
+                        socket,
+                        message
+                    );
                     break;
 
                 case MESSAGE_TYPES.SIGNAL_RECEIVE:
-                    this.receiveSignals(socket, message);
+                    this.receiveSignals(
+                        socket,
+                        message
+                    );
                     break;
 
                 default:
@@ -119,44 +157,54 @@ export class PlatformWebSocketServer {
     }
 
     registerNode(socket, message) {
-        const {
-            node_id,
-            device_name,
-            node_type
-        } = message.payload || {};
+        const registration =
+            this.security.inputValidator
+                .validateNodeRegistration(
+                    message.payload
+                );
 
-        if (
-            typeof node_id !== "string" ||
-            node_id.length === 0 ||
-            node_id.length > 128
-        ) {
-            throw new Error("invalid_node_id");
-        }
+        const authentication =
+            this.security.gatewayGuard
+                .authenticateNode(
+                    registration.nodeId,
+                    message.payload.enrollment_token
+                );
 
-        const existing = this.nodes.get(node_id);
+        const existing =
+            this.nodes.get(
+                registration.nodeId
+            );
 
         if (
             existing &&
             existing !== socket &&
             existing.readyState === WebSocket.OPEN
         ) {
-            throw new Error("node_already_connected");
+            throw new Error(
+                "node_already_connected"
+            );
         }
 
         if (
-            this.nodes.size >= this.config.maxNodes &&
+            this.nodes.size >=
+                this.config.maxNodes &&
             !existing
         ) {
-            throw new Error("node_capacity_reached");
+            throw new Error(
+                "node_capacity_reached"
+            );
         }
 
-        socket.nodeId = node_id;
+        socket.nodeId =
+            registration.nodeId;
 
-        this.nodes.set(node_id, socket);
+        socket.accessToken =
+            authentication.accessToken;
 
-        socket.nodeExpiresAt =
-            Date.now() +
-            this.config.nodeTtlSeconds * 1000;
+        this.nodes.set(
+            registration.nodeId,
+            socket
+        );
 
         this.send(
             socket,
@@ -165,27 +213,30 @@ export class PlatformWebSocketServer {
                 MESSAGE_TYPES.NODE_REGISTER,
                 {
                     status: "registered",
-                    node_id,
+                    node_id:
+                        registration.nodeId,
                     device_name:
-                        typeof device_name === "string"
-                            ? device_name
-                            : "",
+                        registration.deviceName,
                     node_type:
-                        typeof node_type === "string"
-                            ? node_type
-                            : "device",
-                    expires_at: socket.nodeExpiresAt
+                        registration.nodeType,
+                    access_token:
+                        authentication.accessToken,
+                    authenticated_at:
+                        authentication.authenticatedAt
                 }
             )
         );
     }
 
     refreshNode(socket, message) {
-        this.requireRegistered(socket);
+        this.requireAuthenticated(socket);
 
-        socket.nodeExpiresAt =
-            Date.now() +
-            this.config.nodeTtlSeconds * 1000;
+        const result =
+            this.security.nodeLifecycleManager
+                .refreshNode(
+                    socket.nodeId,
+                    socket.accessToken
+                );
 
         this.send(
             socket,
@@ -194,45 +245,51 @@ export class PlatformWebSocketServer {
                 MESSAGE_TYPES.NODE_REFRESH,
                 {
                     status: "refreshed",
-                    node_id: socket.nodeId,
-                    expires_at: socket.nodeExpiresAt
+                    node_id:
+                        result.nodeId,
+                    last_seen_at:
+                        result.lastSeenAt
                 }
             )
         );
     }
 
     createSession(socket, message) {
-        this.requireRegistered(socket);
+        this.requireAuthenticated(socket);
 
-        const {
-            target
-        } = message.payload || {};
+        const target =
+            this.security.inputValidator
+                .validateSessionCreation(
+                    message.payload
+                ).target;
 
-        if (
-            typeof target !== "string" ||
-            target.length === 0
-        ) {
-            throw new Error("target_required");
-        }
-
-        if (target === socket.nodeId) {
-            throw new Error("invalid_session");
-        }
-
-        const targetSocket = this.nodes.get(target);
-
-        if (
-            !targetSocket ||
-            targetSocket.readyState !== WebSocket.OPEN
-        ) {
-            throw new Error("target_not_connected");
-        }
-
-        const session =
-            this.sessionManager.create(
+        this.security.gatewayGuard
+            .validateSessionTarget(
                 socket.nodeId,
                 target
             );
+
+        const targetSocket =
+            this.nodes.get(target);
+
+        if (
+            !targetSocket ||
+            targetSocket.readyState !==
+                WebSocket.OPEN
+        ) {
+            throw new Error(
+                "target_not_connected"
+            );
+        }
+
+        const session =
+            this.security
+                .sessionLifecycleManager
+                .createSession(
+                    socket.nodeId,
+                    target,
+                    socket.accessToken
+                );
 
         this.send(
             socket,
@@ -241,9 +298,12 @@ export class PlatformWebSocketServer {
                 MESSAGE_TYPES.SESSION_CREATE,
                 {
                     status: "created",
-                    session_id: session.sessionId,
-                    state: session.state,
-                    expires_at: session.expiresAt
+                    session_id:
+                        session.sessionId,
+                    state:
+                        session.state,
+                    expires_at:
+                        session.expiresAt
                 }
             )
         );
@@ -255,45 +315,52 @@ export class PlatformWebSocketServer {
                 MESSAGE_TYPES.SESSION_CREATE,
                 {
                     status: "incoming",
-                    session_id: session.sessionId,
-                    initiator: session.initiator,
-                    target: session.target,
-                    state: session.state,
-                    expires_at: session.expiresAt
+                    session_id:
+                        session.sessionId,
+                    initiator:
+                        session.initiator,
+                    target:
+                        session.target,
+                    state:
+                        session.state,
+                    expires_at:
+                        session.expiresAt
                 }
             )
         );
     }
 
-    updateSessionState(socket, message) {
-        this.requireRegistered(socket);
+    updateSessionState(
+        socket,
+        message
+    ) {
+        this.requireAuthenticated(socket);
 
-        const {
-            session_id,
-            state
-        } = message.payload || {};
+        const data =
+            this.security.inputValidator
+                .validateSessionState(
+                    message.payload
+                );
 
         if (
-            typeof session_id !== "string" ||
-            typeof state !== "string"
+            !Object.values(
+                SESSION_STATES
+            ).includes(data.state)
         ) {
             throw new Error(
-                "session_id_and_state_required"
+                "invalid_session_state"
             );
-        }
-
-        if (
-            !Object.values(SESSION_STATES).includes(state)
-        ) {
-            throw new Error("invalid_session_state");
         }
 
         const session =
-            this.sessionManager.updateState(
-                session_id,
-                socket.nodeId,
-                state
-            );
+            this.security
+                .sessionLifecycleManager
+                .updateSessionState(
+                    data.sessionId,
+                    socket.nodeId,
+                    socket.accessToken,
+                    data.state
+                );
 
         this.send(
             socket,
@@ -302,14 +369,17 @@ export class PlatformWebSocketServer {
                 MESSAGE_TYPES.SESSION_STATE,
                 {
                     status: "updated",
-                    session_id: session.sessionId,
-                    state: session.state
+                    session_id:
+                        session.sessionId,
+                    state:
+                        session.state
                 }
             )
         );
 
         const peerId =
-            session.initiator === socket.nodeId
+            session.initiator ===
+            socket.nodeId
                 ? session.target
                 : session.initiator;
 
@@ -319,32 +389,38 @@ export class PlatformWebSocketServer {
                 null,
                 MESSAGE_TYPES.SESSION_STATE,
                 {
-                    session_id: session.sessionId,
-                    state: session.state
+                    session_id:
+                        session.sessionId,
+                    state:
+                        session.state
                 }
             )
         );
     }
 
-    closeSession(socket, message) {
-        this.requireRegistered(socket);
+    closeSession(
+        socket,
+        message
+    ) {
+        this.requireAuthenticated(socket);
 
-        const {
-            session_id
-        } = message.payload || {};
-
-        if (typeof session_id !== "string") {
-            throw new Error("session_id_required");
-        }
+        const sessionId =
+            this.security.inputValidator
+                .validateSessionId(
+                    message.payload?.session_id
+                );
 
         const session =
-            this.sessionManager.close(
-                session_id,
-                socket.nodeId
-            );
+            this.security
+                .sessionLifecycleManager
+                .closeSession(
+                    sessionId,
+                    socket.nodeId,
+                    socket.accessToken
+                );
 
         this.signalingService.removeSession(
-            session_id
+            sessionId
         );
 
         this.send(
@@ -354,13 +430,15 @@ export class PlatformWebSocketServer {
                 MESSAGE_TYPES.SESSION_CLOSE,
                 {
                     status: "closed",
-                    session_id
+                    session_id:
+                        sessionId
                 }
             )
         );
 
         const peerId =
-            session.initiator === socket.nodeId
+            session.initiator ===
+            socket.nodeId
                 ? session.target
                 : session.initiator;
 
@@ -371,44 +449,48 @@ export class PlatformWebSocketServer {
                 MESSAGE_TYPES.SESSION_CLOSE,
                 {
                     status: "closed",
-                    session_id
+                    session_id:
+                        sessionId
                 }
             )
         );
     }
 
-    sendSignal(socket, message) {
-        this.requireRegistered(socket);
+    sendSignal(
+        socket,
+        message
+    ) {
+        this.requireAuthenticated(socket);
 
-        const {
-            session_id,
-            signal_type,
-            payload
-        } = message.payload || {};
+        const data =
+            this.security.inputValidator
+                .validateSignal(
+                    message.payload
+                );
 
-        if (
-            typeof session_id !== "string" ||
-            typeof signal_type !== "string" ||
-            payload === undefined
-        ) {
-            throw new Error(
-                "session_id_signal_type_and_payload_required"
+        this.security.gatewayGuard
+            .authorizeSession(
+                data.sessionId,
+                socket.nodeId,
+                socket.accessToken
             );
-        }
 
         const signal =
             this.signalingService.send(
-                session_id,
+                data.sessionId,
                 socket.nodeId,
-                signal_type,
-                payload
+                data.signalType,
+                data.payload
             );
 
         const session =
-            this.sessionManager.get(session_id);
+            this.sessionManager.get(
+                data.sessionId
+            );
 
         const peerId =
-            session.initiator === socket.nodeId
+            session.initiator ===
+            socket.nodeId
                 ? session.target
                 : session.initiator;
 
@@ -428,26 +510,35 @@ export class PlatformWebSocketServer {
                 MESSAGE_TYPES.SIGNAL_SEND,
                 {
                     status: "accepted",
-                    message_id: signal.id
+                    message_id:
+                        signal.id
                 }
             )
         );
     }
 
-    receiveSignals(socket, message) {
-        this.requireRegistered(socket);
+    receiveSignals(
+        socket,
+        message
+    ) {
+        this.requireAuthenticated(socket);
 
-        const {
-            session_id
-        } = message.payload || {};
+        const sessionId =
+            this.security.inputValidator
+                .validateSessionId(
+                    message.payload?.session_id
+                );
 
-        if (typeof session_id !== "string") {
-            throw new Error("session_id_required");
-        }
+        this.security.gatewayGuard
+            .authorizeSession(
+                sessionId,
+                socket.nodeId,
+                socket.accessToken
+            );
 
         const signals =
             this.signalingService.receive(
-                session_id,
+                sessionId,
                 socket.nodeId
             );
 
@@ -457,34 +548,60 @@ export class PlatformWebSocketServer {
                 message.request_id,
                 MESSAGE_TYPES.SIGNAL_RECEIVE,
                 {
-                    session_id,
+                    session_id:
+                        sessionId,
                     signals
                 }
             )
         );
     }
 
-    requireRegistered(socket) {
+    requireAuthenticated(socket) {
         if (
             !socket.nodeId ||
-            socket.nodeExpiresAt <= Date.now()
+            !socket.accessToken
         ) {
-            throw new Error("node_not_registered");
+            throw new Error(
+                "node_not_authenticated"
+            );
+        }
+
+        if (
+            !this.security
+                .nodeLifecycleManager
+                .validateNode(
+                    socket.nodeId,
+                    socket.accessToken
+                )
+        ) {
+            throw new Error(
+                "node_authentication_failed"
+            );
         }
     }
 
-    sendToNode(nodeId, message) {
-        const socket = this.nodes.get(nodeId);
+    sendToNode(
+        nodeId,
+        message
+    ) {
+        const socket =
+            this.nodes.get(nodeId);
 
         if (
             socket &&
             socket.readyState === WebSocket.OPEN
         ) {
-            this.send(socket, message);
+            this.send(
+                socket,
+                message
+            );
         }
     }
 
-    send(socket, message) {
+    send(
+        socket,
+        message
+    ) {
         if (
             socket.readyState === WebSocket.OPEN
         ) {
@@ -500,13 +617,24 @@ export class PlatformWebSocketServer {
         }
 
         const current =
-            this.nodes.get(socket.nodeId);
-
-        if (current === socket) {
-            this.nodes.delete(socket.nodeId);
-            this.sessionManager.removeNode(
+            this.nodes.get(
                 socket.nodeId
             );
+
+        if (current === socket) {
+            this.nodes.delete(
+                socket.nodeId
+            );
+
+            this.security.nodeLifecycleManager
+                .revokeNode(
+                    socket.nodeId
+                );
+
+            this.security.sessionLifecycleManager
+                .removeNode(
+                    socket.nodeId
+                );
         }
     }
 
