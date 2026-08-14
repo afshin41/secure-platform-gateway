@@ -5,9 +5,18 @@ import { createHealthHandler } from "./http/health.js";
 import { SessionManager } from "./sessions/session-manager.js";
 import { SignalingService } from "./signaling/signaling-service.js";
 import { PlatformWebSocketServer } from "./websocket/websocket-server.js";
+import {
+    createSecurityIntegration
+} from "./security/security-integration.js";
 
 const sessionManager =
     new SessionManager(config);
+
+const security =
+    createSecurityIntegration(
+        config,
+        sessionManager
+    );
 
 const signalingService =
     new SignalingService(
@@ -75,7 +84,8 @@ websocketServer =
         server,
         config,
         sessionManager,
-        signalingService
+        signalingService,
+        security
     );
 
 server.listen(
@@ -103,6 +113,12 @@ server.listen(
 const shutdown = signal => {
     console.log(`Received ${signal}`);
 
+    security.replayProtection.clear();
+    security.rateLimiter.clear();
+    security.nodeLifecycleManager.revokeAll();
+    security.sessionLifecycleManager
+        .removeNode("__shutdown__");
+
     websocketServer.wss.close(() => {
         server.close(() => {
             process.exit(0);
@@ -110,5 +126,12 @@ const shutdown = signal => {
     });
 };
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+process.on(
+    "SIGTERM",
+    () => shutdown("SIGTERM")
+);
+
+process.on(
+    "SIGINT",
+    () => shutdown("SIGINT")
+);
