@@ -16,6 +16,26 @@ export class PlatformWebSocketServer {
         signalingService,
         security
     ) {
+        if (!server) {
+            throw new Error("invalid_server");
+        }
+
+        if (!config || typeof config !== "object") {
+            throw new Error("invalid_config");
+        }
+
+        if (!sessionManager) {
+            throw new Error("invalid_session_manager");
+        }
+
+        if (!signalingService) {
+            throw new Error("invalid_signaling_service");
+        }
+
+        if (!security || !security.gatewayGuard) {
+            throw new Error("invalid_security");
+        }
+
         this.config = config;
         this.sessionManager = sessionManager;
         this.signalingService = signalingService;
@@ -39,7 +59,15 @@ export class PlatformWebSocketServer {
         socket.accessToken = null;
 
         socket.on("message", raw => {
-            this.handleMessage(socket, raw);
+            try {
+                this.handleMessage(socket, raw);
+            } catch {
+                this.closeSocket(
+                    socket,
+                    1008,
+                    "request_rejected"
+                );
+            }
         });
 
         socket.on("close", () => {
@@ -63,7 +91,7 @@ export class PlatformWebSocketServer {
                 socket,
                 createError(
                     null,
-                    error.message,
+                    "invalid_protocol_message",
                     "Invalid protocol message"
                 )
             );
@@ -145,15 +173,56 @@ export class PlatformWebSocketServer {
                     );
             }
         } catch (error) {
-            this.send(
+            this.handleRequestError(
                 socket,
-                createError(
-                    message.request_id,
-                    error.message,
-                    "Request rejected"
-                )
+                message.request_id,
+                error
             );
         }
+    }
+
+    handleRequestError(
+        socket,
+        requestId,
+        error
+    ) {
+        const knownErrors = new Set([
+            "invalid_request_id",
+            "invalid_node_id",
+            "invalid_node_id",
+            "invalid_enrollment_token",
+            "invalid_access_token",
+            "invalid_session_id",
+            "invalid_session_target",
+            "invalid_signal",
+            "node_not_authenticated",
+            "node_authentication_failed",
+            "node_already_connected",
+            "node_capacity_reached",
+            "target_not_connected",
+            "target_not_authenticated",
+            "self_session_forbidden",
+            "session_not_found",
+            "node_not_participant",
+            "unsupported_message_type",
+            "replay_detected",
+            "rate_limit_exceeded"
+        ]);
+
+        const code =
+            typeof error?.message === "string" &&
+            knownErrors.has(error.message)
+                ? error.message
+                : "request_rejected";
+
+        this.send(
+            socket,
+            createError(
+                requestId,
+                code,
+                "Request rejected"
+            )
+        );
     }
 
     registerNode(socket, message) {
@@ -603,10 +672,27 @@ export class PlatformWebSocketServer {
         message
     ) {
         if (
+            socket &&
             socket.readyState === WebSocket.OPEN
         ) {
             socket.send(
                 JSON.stringify(message)
+            );
+        }
+    }
+
+    closeSocket(
+        socket,
+        code,
+        reason
+    ) {
+        if (
+            socket.readyState ===
+            WebSocket.OPEN
+        ) {
+            socket.close(
+                code,
+                reason
             );
         }
     }
