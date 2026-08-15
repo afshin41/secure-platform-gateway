@@ -2,13 +2,20 @@ import crypto from "node:crypto";
 
 import { TokenRevocationManager } from "./token-revocation-manager.js";
 import { SecurityStateManager } from "./security-state-manager.js";
+import { SecretManager } from "./secret-manager.js";
 
 export class SecurityManager {
     constructor(config) {
         this.config = config;
 
-        this.enrollmentToken =
-            config.enrollmentToken || "";
+        this.secretManager =
+            new SecretManager({
+                environment: config.environment,
+                enrollmentToken:
+                    config.enrollmentToken || ""
+            });
+
+        this.secretManager.validatePolicy();
 
         this.authenticatedNodes = new Map();
 
@@ -20,31 +27,7 @@ export class SecurityManager {
     }
 
     validateEnrollmentToken(token) {
-        if (
-            typeof token !== "string" ||
-            token.length === 0 ||
-            this.enrollmentToken.length === 0
-        ) {
-            return false;
-        }
-
-        const supplied =
-            Buffer.from(token, "utf8");
-
-        const expected =
-            Buffer.from(
-                this.enrollmentToken,
-                "utf8"
-            );
-
-        if (supplied.length !== expected.length) {
-            return false;
-        }
-
-        return crypto.timingSafeEqual(
-            supplied,
-            expected
-        );
+        return this.secretManager.verify(token);
     }
 
     generateAccessToken() {
