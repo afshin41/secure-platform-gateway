@@ -8,7 +8,7 @@ export class SecurityManager {
         this.config = config;
 
         this.enrollmentToken =
-            process.env.GATEWAY_ENROLLMENT_TOKEN || "";
+            config.enrollmentToken || "";
 
         this.authenticatedNodes = new Map();
 

@@ -20,6 +20,18 @@ const requireNonEmptyString = (value, name) => {
     }
 };
 
+const requireValidEnvironment = (value) => {
+    if (
+        value !== "development" &&
+        value !== "test" &&
+        value !== "production"
+    ) {
+        throw new Error(
+            "invalid_configuration:environment"
+        );
+    }
+};
+
 export const validateConfig = (config) => {
     if (
         !config ||
@@ -29,6 +41,10 @@ export const validateConfig = (config) => {
             "invalid_configuration:config"
         );
     }
+
+    requireValidEnvironment(
+        config.environment
+    );
 
     requireNonEmptyString(
         config.host,
@@ -74,6 +90,15 @@ export const validateConfig = (config) => {
         config.serverVersion,
         "serverVersion"
     );
+
+    if (
+        config.enrollmentToken !== undefined &&
+        typeof config.enrollmentToken !== "string"
+    ) {
+        throw new Error(
+            "invalid_configuration:enrollmentToken"
+        );
+    }
 
     return true;
 };
