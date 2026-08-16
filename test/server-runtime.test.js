@@ -253,6 +253,73 @@ test(
                 WebSocket.OPEN
             );
 
+            const unknownTypeError =
+                new Promise(
+                    (resolve, reject) => {
+                        const timer =
+                            setTimeout(
+                                () =>
+                                    reject(
+                                        new Error(
+                                            "timeout_waiting_for_unknown_type_error"
+                                        )
+                                    ),
+                                3000
+                            );
+
+                        socket.once(
+                            "message",
+                            data => {
+                                clearTimeout(
+                                    timer
+                                );
+                                resolve(
+                                    JSON.parse(
+                                        data.toString()
+                                    )
+                                );
+                            }
+                        );
+
+                        socket.once(
+                            "error",
+                            reject
+                        );
+                    }
+                );
+
+            socket.send(
+                JSON.stringify({
+                    version: 1,
+                    request_id: "unknown-type-test",
+                    type: "unknown.message",
+                    payload: {}
+                })
+            );
+
+            const unknownTypeResponse =
+                await unknownTypeError;
+
+            assert.equal(
+                unknownTypeResponse.version,
+                1
+            );
+
+            assert.equal(
+                unknownTypeResponse.type,
+                "error"
+            );
+
+            assert.equal(
+                unknownTypeResponse.request_id,
+                "unknown-type-test"
+            );
+
+            assert.equal(
+                socket.readyState,
+                WebSocket.OPEN
+            );
+
             socket.close();
 
             await new Promise(
