@@ -6,6 +6,11 @@ const DEFAULTS = Object.freeze({
     maxNodes: 10000,
     maxSessions: 10000,
     maxMessageBytes: 1024 * 1024,
+    maxWebSocketConnections: 10000,
+    httpRequestTimeoutMs: 30000,
+    httpHeadersTimeoutMs: 10000,
+    httpKeepAliveTimeoutMs: 5000,
+    shutdownTimeoutMs: 10000,
     environment: "production"
 });
 
@@ -112,6 +117,36 @@ export const config = Object.freeze({
         process.env.MAX_MESSAGE_BYTES,
         "MAX_MESSAGE_BYTES",
         DEFAULTS.maxMessageBytes
+    ),
+
+    maxWebSocketConnections: parsePositiveInteger(
+        process.env.MAX_WEBSOCKET_CONNECTIONS,
+        "MAX_WEBSOCKET_CONNECTIONS",
+        DEFAULTS.maxWebSocketConnections
+    ),
+
+    httpRequestTimeoutMs: parsePositiveInteger(
+        process.env.HTTP_REQUEST_TIMEOUT_MS,
+        "HTTP_REQUEST_TIMEOUT_MS",
+        DEFAULTS.httpRequestTimeoutMs
+    ),
+
+    httpHeadersTimeoutMs: parsePositiveInteger(
+        process.env.HTTP_HEADERS_TIMEOUT_MS,
+        "HTTP_HEADERS_TIMEOUT_MS",
+        DEFAULTS.httpHeadersTimeoutMs
+    ),
+
+    httpKeepAliveTimeoutMs: parsePositiveInteger(
+        process.env.HTTP_KEEP_ALIVE_TIMEOUT_MS,
+        "HTTP_KEEP_ALIVE_TIMEOUT_MS",
+        DEFAULTS.httpKeepAliveTimeoutMs
+    ),
+
+    shutdownTimeoutMs: parsePositiveInteger(
+        process.env.SHUTDOWN_TIMEOUT_MS,
+        "SHUTDOWN_TIMEOUT_MS",
+        DEFAULTS.shutdownTimeoutMs
     ),
 
     enrollmentToken:
