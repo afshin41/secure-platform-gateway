@@ -1,17 +1,33 @@
-import { SecurityManager } from "./security-manager.js";
-
 export class AuthenticationManager {
-    constructor(config) {
+    constructor(
+        config,
+        securityManager
+    ) {
         if (!config || typeof config !== "object") {
             throw new Error("invalid_config");
         }
 
+        if (
+            !securityManager ||
+            typeof securityManager.authenticateNode !== "function" ||
+            typeof securityManager.validateAccessToken !== "function" ||
+            typeof securityManager.revokeNode !== "function" ||
+            typeof securityManager.revokeAll !== "function" ||
+            typeof securityManager.count !== "function"
+        ) {
+            throw new Error(
+                "invalid_security_manager"
+            );
+        }
+
         this.config = config;
-        this.securityManager =
-            new SecurityManager(config);
+        this.securityManager = securityManager;
     }
 
-    authenticate(nodeId, enrollmentToken) {
+    authenticate(
+        nodeId,
+        enrollmentToken
+    ) {
         const result =
             this.securityManager.authenticateNode(
                 nodeId,
@@ -25,7 +41,10 @@ export class AuthenticationManager {
         };
     }
 
-    validate(nodeId, accessToken) {
+    validate(
+        nodeId,
+        accessToken
+    ) {
         return this.securityManager.validateAccessToken(
             nodeId,
             accessToken
