@@ -181,6 +181,78 @@ test(
                 WebSocket.OPEN
             );
 
+            const protocolError =
+                new Promise(
+                    (resolve, reject) => {
+                        const timer =
+                            setTimeout(
+                                () =>
+                                    reject(
+                                        new Error(
+                                            "timeout_waiting_for_protocol_error"
+                                        )
+                                    ),
+                                3000
+                            );
+
+                        socket.once(
+                            "message",
+                            data => {
+                                clearTimeout(
+                                    timer
+                                );
+                                resolve(
+                                    JSON.parse(
+                                        data.toString()
+                                    )
+                                );
+                            }
+                        );
+
+                        socket.once(
+                            "error",
+                            reject
+                        );
+                    }
+                );
+
+            socket.send(
+                "{invalid-json"
+            );
+
+            const errorResponse =
+                await protocolError;
+
+            assert.equal(
+                errorResponse.version,
+                1
+            );
+
+            assert.equal(
+                errorResponse.type,
+                "error"
+            );
+
+            assert.equal(
+                errorResponse.request_id,
+                null
+            );
+
+            assert.equal(
+                errorResponse.payload.code,
+                "invalid_protocol_message"
+            );
+
+            assert.equal(
+                errorResponse.payload.message,
+                "Invalid protocol message"
+            );
+
+            assert.equal(
+                socket.readyState,
+                WebSocket.OPEN
+            );
+
             socket.close();
 
             await new Promise(
