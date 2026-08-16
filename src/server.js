@@ -60,6 +60,16 @@ websocketServer =
         security
     );
 
+server.on("error", error => {
+    console.error(
+        `Gateway server error: ${error?.code || "unknown_error"}`
+    );
+
+    if (!server.listening) {
+        process.exitCode = 1;
+    }
+});
+
 server.listen(
     config.port,
     config.host,
