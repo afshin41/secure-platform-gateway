@@ -52,11 +52,22 @@ export class PlatformWebSocketServer {
             "connection",
             socket => this.handleConnection(socket)
         );
+
+        this.heartbeatInterval = setInterval(
+            () => this.checkConnections(),
+            config.websocketHeartbeatIntervalMs ??
+                30000
+        );
     }
 
     handleConnection(socket) {
         socket.nodeId = null;
         socket.accessToken = null;
+        socket.isAlive = true;
+
+        socket.on("pong", () => {
+            socket.isAlive = true;
+        });
 
         socket.on("message", raw => {
             try {
@@ -697,6 +708,18 @@ export class PlatformWebSocketServer {
         }
     }
 
+    checkConnections() {
+        for (const socket of this.wss.clients) {
+            if (socket.isAlive === false) {
+                socket.terminate();
+                continue;
+            }
+
+            socket.isAlive = false;
+            socket.ping();
+        }
+    }
+
     handleClose(socket) {
         if (!socket.nodeId) {
             return;
@@ -726,5 +749,17 @@ export class PlatformWebSocketServer {
 
     getNodeCount() {
         return this.nodes.size;
+    }
+
+    close() {
+        if (this.heartbeatInterval) {
+            clearInterval(
+                this.heartbeatInterval
+            );
+
+            this.heartbeatInterval = null;
+        }
+
+        this.wss.close();
     }
 }

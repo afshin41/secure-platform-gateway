@@ -122,10 +122,10 @@ const shutdown = signal => {
     security.sessionLifecycleManager
         .removeNode("__shutdown__");
 
-    websocketServer.wss.close(() => {
-        server.close(() => {
-            process.exit(0);
-        });
+    websocketServer.close();
+
+    server.close(() => {
+        process.exit(0);
     });
 };
 
