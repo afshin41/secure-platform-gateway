@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { spawn } from "node:child_process";
+import WebSocket from "ws";
 
 const waitForOutput = (
     child,
@@ -154,6 +155,40 @@ test(
             assert.equal(
                 notFound.error,
                 "not_found"
+            );
+
+            const socket =
+                new WebSocket(
+                    "ws://127.0.0.1:10003/"
+                );
+
+            await new Promise(
+                (resolve, reject) => {
+                    socket.once(
+                        "open",
+                        resolve
+                    );
+
+                    socket.once(
+                        "error",
+                        reject
+                    );
+                }
+            );
+
+            assert.equal(
+                socket.readyState,
+                WebSocket.OPEN
+            );
+
+            socket.close();
+
+            await new Promise(
+                resolve =>
+                    socket.once(
+                        "close",
+                        resolve
+                    )
             );
 
             child.kill("SIGTERM");
