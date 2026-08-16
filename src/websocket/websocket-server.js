@@ -721,30 +721,31 @@ export class PlatformWebSocketServer {
     }
 
     handleClose(socket) {
+        if (socket.lifecycleClosed) {
+            return;
+        }
+
+        socket.lifecycleClosed = true;
+
         if (!socket.nodeId) {
             return;
         }
 
+        const nodeId = socket.nodeId;
         const current =
-            this.nodes.get(
-                socket.nodeId
-            );
+            this.nodes.get(nodeId);
 
-        if (current === socket) {
-            this.nodes.delete(
-                socket.nodeId
-            );
-
-            this.security.nodeLifecycleManager
-                .revokeNode(
-                    socket.nodeId
-                );
-
-            this.security.sessionLifecycleManager
-                .removeNode(
-                    socket.nodeId
-                );
+        if (current !== socket) {
+            return;
         }
+
+        this.nodes.delete(nodeId);
+
+        this.security.nodeLifecycleManager
+            .revokeNode(nodeId);
+
+        this.security.sessionLifecycleManager
+            .removeNode(nodeId);
     }
 
     getNodeCount() {
