@@ -82,6 +82,16 @@ export const validateConfig = (config) => {
     );
 
     requirePositiveInteger(
+        config.securityRateWindowMs,
+        "securityRateWindowMs"
+    );
+
+    requirePositiveInteger(
+        config.securityRateMaxRequests,
+        "securityRateMaxRequests"
+    );
+
+    requirePositiveInteger(
         config.maxWebSocketConnections,
         "maxWebSocketConnections"
     );

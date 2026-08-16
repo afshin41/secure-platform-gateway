@@ -6,6 +6,8 @@ const DEFAULTS = Object.freeze({
     maxNodes: 10000,
     maxSessions: 10000,
     maxMessageBytes: 1024 * 1024,
+    securityRateWindowMs: 60 * 1000,
+    securityRateMaxRequests: 100,
     maxWebSocketConnections: 10000,
     httpRequestTimeoutMs: 30000,
     httpHeadersTimeoutMs: 10000,
@@ -117,6 +119,18 @@ export const config = Object.freeze({
         process.env.MAX_MESSAGE_BYTES,
         "MAX_MESSAGE_BYTES",
         DEFAULTS.maxMessageBytes
+    ),
+
+    securityRateWindowMs: parsePositiveInteger(
+        process.env.SECURITY_RATE_WINDOW_MS,
+        "SECURITY_RATE_WINDOW_MS",
+        DEFAULTS.securityRateWindowMs
+    ),
+
+    securityRateMaxRequests: parsePositiveInteger(
+        process.env.SECURITY_RATE_MAX_REQUESTS,
+        "SECURITY_RATE_MAX_REQUESTS",
+        DEFAULTS.securityRateMaxRequests
     ),
 
     maxWebSocketConnections: parsePositiveInteger(

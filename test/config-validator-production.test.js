@@ -11,6 +11,8 @@ const baseConfig = {
     maxNodes: 10000,
     maxSessions: 10000,
     maxMessageBytes: 1024 * 1024,
+    securityRateWindowMs: 60000,
+    securityRateMaxRequests: 100,
     maxWebSocketConnections: 10000,
     httpHeadersTimeoutMs: 10000,
     httpRequestTimeoutMs: 30000,
@@ -44,5 +46,28 @@ test("rejects headers timeout above request timeout", () => {
                 httpHeadersTimeoutMs: 40000
             }),
         /invalid_configuration:httpHeadersTimeoutMs/
+    );
+});
+
+
+test("rejects invalid security rate window", () => {
+    assert.throws(
+        () =>
+            validateConfig({
+                ...baseConfig,
+                securityRateWindowMs: 0
+            }),
+        /invalid_configuration:securityRateWindowMs/
+    );
+});
+
+test("rejects invalid security rate request limit", () => {
+    assert.throws(
+        () =>
+            validateConfig({
+                ...baseConfig,
+                securityRateMaxRequests: 0
+            }),
+        /invalid_configuration:securityRateMaxRequests/
     );
 });
