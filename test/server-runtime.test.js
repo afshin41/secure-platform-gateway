@@ -72,6 +72,44 @@ test(
                 /Secure Platform Gateway 1\.0\.0/
             );
 
+            const healthResponse =
+                await fetch(
+                    "http://127.0.0.1:10003/health"
+                );
+
+            assert.equal(
+                healthResponse.status,
+                200
+            );
+
+            const health =
+                await healthResponse.json();
+
+            assert.equal(
+                health.service,
+                "Secure Platform Gateway"
+            );
+
+            assert.equal(
+                health.version,
+                "1.0.0"
+            );
+
+            assert.equal(
+                health.status,
+                "healthy"
+            );
+
+            assert.equal(
+                typeof health.nodes,
+                "number"
+            );
+
+            assert.equal(
+                typeof health.sessions,
+                "number"
+            );
+
             child.kill("SIGTERM");
 
             const exitCode =
