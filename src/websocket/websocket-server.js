@@ -45,7 +45,10 @@ export class PlatformWebSocketServer {
 
         this.wss = new WebSocketServer({
             server,
-            maxPayload: config.maxMessageBytes
+            maxPayload: config.maxMessageBytes,
+            maxConnections:
+                config.maxWebSocketConnections ??
+                config.maxNodes
         });
 
         this.wss.on(
