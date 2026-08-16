@@ -82,6 +82,15 @@ const server = http.createServer(
     }
 );
 
+server.requestTimeout =
+    config.httpRequestTimeoutMs ?? 30000;
+
+server.headersTimeout =
+    config.httpHeadersTimeoutMs ?? 10000;
+
+server.keepAliveTimeout =
+    config.httpKeepAliveTimeoutMs ?? 5000;
+
 websocketServer =
     new PlatformWebSocketServer(
         server,
