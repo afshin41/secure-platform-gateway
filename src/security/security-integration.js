@@ -9,6 +9,7 @@ import { SecurityReplayProtection } from "./security-replay-protection.js";
 import { SecurityNodeLifecycleManager } from "./security-node-lifecycle-manager.js";
 import { SecuritySessionLifecycleManager } from "./security-session-lifecycle-manager.js";
 import { SecurityGatewayGuard } from "./security-gateway-guard.js";
+import { SecurityConnectionGuard } from "./security-connection-guard.js";
 
 export function createSecurityIntegration(
     config,
@@ -101,6 +102,14 @@ export function createSecurityIntegration(
             sessionLifecycleManager
         );
 
+    const connectionGuard =
+        new SecurityConnectionGuard(
+            config,
+            policyManager,
+            rateLimiter,
+            auditManager
+        );
+
     return Object.freeze({
         securityManager,
         authenticationManager,
@@ -112,6 +121,7 @@ export function createSecurityIntegration(
         replayProtection,
         nodeLifecycleManager,
         sessionLifecycleManager,
-        gatewayGuard
+        gatewayGuard,
+        connectionGuard
     });
 }

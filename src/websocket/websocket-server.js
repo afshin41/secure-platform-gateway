@@ -32,7 +32,11 @@ export class PlatformWebSocketServer {
             throw new Error("invalid_signaling_service");
         }
 
-        if (!security || !security.gatewayGuard) {
+        if (
+            !security ||
+            !security.gatewayGuard ||
+            !security.connectionGuard
+        ) {
             throw new Error("invalid_security");
         }
 
@@ -291,6 +295,10 @@ export class PlatformWebSocketServer {
                 "node_capacity_reached"
             );
         }
+
+        this.security.connectionGuard.accept(
+            registration.nodeId
+        );
 
         socket.nodeId =
             registration.nodeId;
@@ -743,6 +751,12 @@ export class PlatformWebSocketServer {
         }
 
         socket.lifecycleClosed = true;
+
+        if (socket.nodeId) {
+            this.security.connectionGuard.remove(
+                socket.nodeId
+            );
+        }
 
         if (!socket.nodeId) {
             return;
