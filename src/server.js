@@ -2,7 +2,7 @@ import http from "node:http";
 
 import { config } from "./config/config.js";
 import { validateConfig } from "./config/config-validator.js";
-import { createHealthHandler } from "./http/health.js";
+import { createHttpRouter } from "./http/http-router.js";
 import { SessionManager } from "./sessions/session-manager.js";
 import { SignalingService } from "./signaling/signaling-service.js";
 import { PlatformWebSocketServer } from "./websocket/websocket-server.js";
@@ -29,106 +29,17 @@ const signalingService =
 
 let websocketServer;
 
-const sendJson = (
-    response,
-    statusCode,
-    payload,
-    extraHeaders = {}
-) => {
-    const body = JSON.stringify(payload);
-
-    response.writeHead(statusCode, {
-        "Content-Type": "application/json; charset=utf-8",
-        "Content-Length": Buffer.byteLength(body),
-        "Cache-Control": "no-store",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "Referrer-Policy": "no-referrer",
-        "Content-Security-Policy": "default-src 'none'",
-        ...extraHeaders
-    });
-
-    response.end(body);
-};
+const httpRouter =
+    createHttpRouter(
+        config,
+        sessionManager,
+        () =>
+            websocketServer
+                ?.getNodeCount() ?? 0
+    );
 
 const server = http.createServer(
-    (request, response) => {
-        let pathname;
-
-        try {
-            pathname = new URL(
-                request.url || "/",
-                "http://localhost"
-            ).pathname;
-        } catch {
-            sendJson(
-                response,
-                400,
-                {
-                    error: "invalid_request_target"
-                }
-            );
-            return;
-        }
-
-        if (
-            request.method === "GET" &&
-            pathname === "/health"
-        ) {
-            const handler =
-                createHealthHandler(
-                    config,
-                    sessionManager,
-                    () =>
-                        websocketServer
-                            ?.getNodeCount() ?? 0
-                );
-
-            handler(request, response);
-            return;
-        }
-
-        if (
-            request.method === "GET" &&
-            pathname === "/"
-        ) {
-            sendJson(
-                response,
-                200,
-                {
-                    service: config.serverName,
-                    version: config.serverVersion,
-                    status: "online"
-                }
-            );
-            return;
-        }
-
-        if (
-            pathname === "/" ||
-            pathname === "/health"
-        ) {
-            sendJson(
-                response,
-                405,
-                {
-                    error: "method_not_allowed"
-                },
-                {
-                    Allow: "GET"
-                }
-            );
-            return;
-        }
-
-        sendJson(
-            response,
-            404,
-            {
-                error: "not_found"
-            }
-        );
-    }
+    httpRouter
 );
 
 server.requestTimeout =
