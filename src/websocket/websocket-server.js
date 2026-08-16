@@ -64,6 +64,19 @@ export class PlatformWebSocketServer {
     }
 
     handleConnection(socket) {
+        const maxConnections =
+            this.config.maxWebSocketConnections ??
+            this.config.maxNodes;
+
+        if (
+            Number.isInteger(maxConnections) &&
+            maxConnections > 0 &&
+            this.wss.clients.size > maxConnections
+        ) {
+            socket.close(1013, "connection_capacity_reached");
+            return;
+        }
+
         socket.nodeId = null;
         socket.accessToken = null;
         socket.isAlive = true;
