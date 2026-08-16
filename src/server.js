@@ -122,7 +122,15 @@ server.listen(
     }
 );
 
+let shuttingDown = false;
+
 const shutdown = signal => {
+    if (shuttingDown) {
+        return;
+    }
+
+    shuttingDown = true;
+
     console.log(`Received ${signal}`);
 
     security.replayProtection.clear();
@@ -133,7 +141,13 @@ const shutdown = signal => {
 
     websocketServer.close();
 
+    const shutdownTimeout = setTimeout(
+        () => process.exit(1),
+        config.shutdownTimeoutMs ?? 10000
+    );
+
     server.close(() => {
+        clearTimeout(shutdownTimeout);
         process.exit(0);
     });
 };
