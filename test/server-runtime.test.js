@@ -110,6 +110,52 @@ test(
                 "number"
             );
 
+            const rootResponse =
+                await fetch(
+                    "http://127.0.0.1:10003/"
+                );
+
+            assert.equal(
+                rootResponse.status,
+                200
+            );
+
+            const root =
+                await rootResponse.json();
+
+            assert.equal(
+                root.service,
+                "Secure Platform Gateway"
+            );
+
+            assert.equal(
+                root.version,
+                "1.0.0"
+            );
+
+            assert.equal(
+                root.status,
+                "online"
+            );
+
+            const notFoundResponse =
+                await fetch(
+                    "http://127.0.0.1:10003/not-found"
+                );
+
+            assert.equal(
+                notFoundResponse.status,
+                404
+            );
+
+            const notFound =
+                await notFoundResponse.json();
+
+            assert.equal(
+                notFound.error,
+                "not_found"
+            );
+
             child.kill("SIGTERM");
 
             const exitCode =
