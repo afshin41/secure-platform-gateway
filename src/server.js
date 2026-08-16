@@ -29,11 +29,51 @@ const signalingService =
 
 let websocketServer;
 
+const sendJson = (
+    response,
+    statusCode,
+    payload,
+    extraHeaders = {}
+) => {
+    const body = JSON.stringify(payload);
+
+    response.writeHead(statusCode, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Length": Buffer.byteLength(body),
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "no-referrer",
+        "Content-Security-Policy": "default-src 'none'",
+        ...extraHeaders
+    });
+
+    response.end(body);
+};
+
 const server = http.createServer(
     (request, response) => {
+        let pathname;
+
+        try {
+            pathname = new URL(
+                request.url || "/",
+                "http://localhost"
+            ).pathname;
+        } catch {
+            sendJson(
+                response,
+                400,
+                {
+                    error: "invalid_request_target"
+                }
+            );
+            return;
+        }
+
         if (
             request.method === "GET" &&
-            request.url === "/health"
+            pathname === "/health"
         ) {
             const handler =
                 createHealthHandler(
@@ -50,34 +90,43 @@ const server = http.createServer(
 
         if (
             request.method === "GET" &&
-            request.url === "/"
+            pathname === "/"
         ) {
-            const body = JSON.stringify({
-                service: config.serverName,
-                version: config.serverVersion,
-                status: "online"
-            });
-
-            response.writeHead(200, {
-                "Content-Type":
-                    "application/json; charset=utf-8",
-                "Content-Length":
-                    Buffer.byteLength(body)
-            });
-
-            response.end(body);
+            sendJson(
+                response,
+                200,
+                {
+                    service: config.serverName,
+                    version: config.serverVersion,
+                    status: "online"
+                }
+            );
             return;
         }
 
-        response.writeHead(404, {
-            "Content-Type":
-                "application/json; charset=utf-8"
-        });
+        if (
+            pathname === "/" ||
+            pathname === "/health"
+        ) {
+            sendJson(
+                response,
+                405,
+                {
+                    error: "method_not_allowed"
+                },
+                {
+                    Allow: "GET"
+                }
+            );
+            return;
+        }
 
-        response.end(
-            JSON.stringify({
+        sendJson(
+            response,
+            404,
+            {
                 error: "not_found"
-            })
+            }
         );
     }
 );
