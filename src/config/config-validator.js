@@ -106,6 +106,24 @@ export const validateConfig = (config) => {
         "shutdownTimeoutMs"
     );
 
+    if (
+        config.maxWebSocketConnections >
+        config.maxNodes
+    ) {
+        throw new Error(
+            "invalid_configuration:maxWebSocketConnections"
+        );
+    }
+
+    if (
+        config.httpHeadersTimeoutMs >
+        config.httpRequestTimeoutMs
+    ) {
+        throw new Error(
+            "invalid_configuration:httpHeadersTimeoutMs"
+        );
+    }
+
     requireNonEmptyString(
         config.serverName,
         "serverName"
