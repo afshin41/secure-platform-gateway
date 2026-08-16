@@ -81,6 +81,31 @@ export const validateConfig = (config) => {
         "maxMessageBytes"
     );
 
+    requirePositiveInteger(
+        config.maxWebSocketConnections,
+        "maxWebSocketConnections"
+    );
+
+    requirePositiveInteger(
+        config.httpRequestTimeoutMs,
+        "httpRequestTimeoutMs"
+    );
+
+    requirePositiveInteger(
+        config.httpHeadersTimeoutMs,
+        "httpHeadersTimeoutMs"
+    );
+
+    requirePositiveInteger(
+        config.httpKeepAliveTimeoutMs,
+        "httpKeepAliveTimeoutMs"
+    );
+
+    requirePositiveInteger(
+        config.shutdownTimeoutMs,
+        "shutdownTimeoutMs"
+    );
+
     requireNonEmptyString(
         config.serverName,
         "serverName"
