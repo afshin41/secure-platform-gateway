@@ -232,6 +232,7 @@ export class PlatformWebSocketServer {
             "session_not_found",
             "node_not_participant",
             "unsupported_message_type",
+            "replayed_request",
             "replay_detected",
             "rate_limit_exceeded"
         ]);

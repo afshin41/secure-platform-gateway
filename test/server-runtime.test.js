@@ -320,6 +320,129 @@ test(
                 WebSocket.OPEN
             );
 
+            const replayRequest =
+                JSON.stringify({
+                    version: 1,
+                    request_id: "replay-test-001",
+                    type: "unknown.message",
+                    payload: {}
+                });
+
+            const firstResponse =
+                new Promise(
+                    (resolve, reject) => {
+                        const timer =
+                            setTimeout(
+                                () =>
+                                    reject(
+                                        new Error(
+                                            "timeout_waiting_for_first_response"
+                                        )
+                                    ),
+                                3000
+                            );
+
+                        socket.once(
+                            "message",
+                            data => {
+                                clearTimeout(
+                                    timer
+                                );
+                                resolve(
+                                    JSON.parse(
+                                        data.toString()
+                                    )
+                                );
+                            }
+                        );
+
+                        socket.once(
+                            "error",
+                            reject
+                        );
+                    }
+                );
+
+            socket.send(replayRequest);
+
+            const first =
+                await firstResponse;
+
+            assert.equal(
+                first.type,
+                "error"
+            );
+
+            assert.equal(
+                first.request_id,
+                "replay-test-001"
+            );
+
+            const replayResponse =
+                new Promise(
+                    (resolve, reject) => {
+                        const timer =
+                            setTimeout(
+                                () =>
+                                    reject(
+                                        new Error(
+                                            "timeout_waiting_for_replay_response"
+                                        )
+                                    ),
+                                3000
+                            );
+
+                        socket.once(
+                            "message",
+                            data => {
+                                clearTimeout(
+                                    timer
+                                );
+                                resolve(
+                                    JSON.parse(
+                                        data.toString()
+                                    )
+                                );
+                            }
+                        );
+
+                        socket.once(
+                            "error",
+                            reject
+                        );
+                    }
+                );
+
+            socket.send(replayRequest);
+
+            const replay =
+                await replayResponse;
+
+            assert.equal(
+                replay.version,
+                1
+            );
+
+            assert.equal(
+                replay.type,
+                "error"
+            );
+
+            assert.equal(
+                replay.request_id,
+                "replay-test-001"
+            );
+
+            assert.equal(
+                replay.payload.code,
+                "replayed_request"
+            );
+
+            assert.equal(
+                socket.readyState,
+                WebSocket.OPEN
+            );
+
             socket.close();
 
             await new Promise(
