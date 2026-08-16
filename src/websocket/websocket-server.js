@@ -752,7 +752,7 @@ export class PlatformWebSocketServer {
         return this.nodes.size;
     }
 
-    close() {
+    close(callback) {
         if (this.heartbeatInterval) {
             clearInterval(
                 this.heartbeatInterval
@@ -761,6 +761,14 @@ export class PlatformWebSocketServer {
             this.heartbeatInterval = null;
         }
 
-        this.wss.close();
+        for (const socket of this.wss.clients) {
+            socket.close();
+        }
+
+        this.wss.close(
+            typeof callback === "function"
+                ? callback
+                : undefined
+        );
     }
 }
