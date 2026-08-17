@@ -13,23 +13,36 @@ export class SecurityHealthManager {
     }
 
     getStatus() {
+        const authenticatedNodes =
+            this.security.securityManager.count();
+
+        const activeConnections =
+            this.security.connectionGuard.count();
+
+        const rateLimitEntries =
+            this.security.rateLimiter.count();
+
+        const replayEntries =
+            this.security.replayProtection.count();
+
+        const auditEvents =
+            this.security.auditManager.count();
+
+        const healthy =
+            authenticatedNodes >= 0 &&
+            activeConnections >= 0 &&
+            rateLimitEntries >= 0 &&
+            replayEntries >= 0 &&
+            auditEvents >= 0;
+
         return {
-            status: "ok",
+            status: healthy ? "ok" : "degraded",
             security: {
-                authenticatedNodes:
-                    this.security.securityManager.count(),
-
-                activeConnections:
-                    this.security.connectionGuard.count(),
-
-                rateLimitEntries:
-                    this.security.rateLimiter.count(),
-
-                replayEntries:
-                    this.security.replayProtection.count(),
-
-                auditEvents:
-                    this.security.auditManager.count()
+                authenticatedNodes,
+                activeConnections,
+                rateLimitEntries,
+                replayEntries,
+                auditEvents
             },
             timestamp: Date.now()
         };
