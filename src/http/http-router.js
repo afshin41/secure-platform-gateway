@@ -1,83 +1,86 @@
-import { sendJson } from "./response.js";
 import { createHealthHandler } from "./health.js";
 
 export function createHttpRouter(
     config,
     sessionManager,
-    getNodeCount
+    getNodeCount,
+    getSecurityHealth = null
 ) {
-    return (request, response) => {
-        let pathname;
+    const healthHandler =
+        createHealthHandler(
+            config,
+            getNodeCount,
+            getSecurityHealth
+        );
 
-        try {
-            pathname = new URL(
-                request.url || "/",
-                "http://localhost"
-            ).pathname;
-        } catch {
-            sendJson(
-                response,
-                400,
-                {
-                    error: "invalid_request_target"
-                }
-            );
-            return;
-        }
-
-        if (
-            request.method === "GET" &&
-            pathname === "/health"
-        ) {
-            const handler = createHealthHandler(
-                config,
-                sessionManager,
-                getNodeCount
+    return (req, res) => {
+        const url =
+            new URL(
+                req.url,
+                `http://${req.headers.host || "localhost"}`
             );
 
-            handler(request, response);
-            return;
-        }
-
         if (
-            request.method === "GET" &&
-            pathname === "/"
+            req.method === "GET" &&
+            url.pathname === "/health"
         ) {
-            sendJson(
-                response,
+            const health =
+                healthHandler();
+
+            res.writeHead(
                 200,
                 {
-                    service: config.serverName,
-                    version: config.serverVersion,
-                    status: "online"
+                    "Content-Type":
+                        "application/json; charset=utf-8",
+                    "Cache-Control":
+                        "no-store"
                 }
             );
+
+            res.end(
+                JSON.stringify(health)
+            );
+
             return;
         }
 
         if (
-            pathname === "/" ||
-            pathname === "/health"
+            req.method === "GET" &&
+            url.pathname === "/"
         ) {
-            sendJson(
-                response,
-                405,
+            res.writeHead(
+                200,
                 {
-                    error: "method_not_allowed"
-                },
-                {
-                    Allow: "GET"
+                    "Content-Type":
+                        "application/json; charset=utf-8"
                 }
             );
+
+            res.end(
+                JSON.stringify({
+                    service:
+                        config.serverName,
+                    version:
+                        config.serverVersion,
+                    status: "online"
+                })
+            );
+
             return;
         }
 
-        sendJson(
-            response,
+        res.writeHead(
             404,
             {
-                error: "not_found"
+                "Content-Type":
+                    "application/json; charset=utf-8"
             }
+        );
+
+        res.end(
+            JSON.stringify({
+                error: "not_found"
+            })
         );
     };
 }
