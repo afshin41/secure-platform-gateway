@@ -27,7 +27,9 @@ export class SessionManager {
             throw new Error("session_capacity_reached");
         }
 
-        const sessionId = `sess_${crypto.randomBytes(24).toString("base64url")}`;
+        const sessionId =
+            `sess_${crypto.randomBytes(24).toString("base64url")}`;
+
         const current = Date.now();
 
         const session = {
@@ -49,6 +51,7 @@ export class SessionManager {
 
     get(sessionId) {
         this.cleanupExpired();
+
         return this.sessions.get(sessionId) || null;
     }
 
@@ -109,6 +112,7 @@ export class SessionManager {
 
     count() {
         this.cleanupExpired();
+
         return this.sessions.size;
     }
 }
