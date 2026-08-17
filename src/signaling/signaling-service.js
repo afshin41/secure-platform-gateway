@@ -60,4 +60,8 @@ export class SignalingService {
     removeSession(sessionId) {
         this.messages.delete(sessionId);
     }
+
+    clear() {
+        this.messages.clear();
+    }
 }

@@ -38,9 +38,10 @@ const httpRouter =
                 ?.getNodeCount() ?? 0
     );
 
-const server = http.createServer(
-    httpRouter
-);
+const server =
+    http.createServer(
+        httpRouter
+    );
 
 server.requestTimeout =
     config.httpRequestTimeoutMs ?? 30000;
@@ -60,15 +61,18 @@ websocketServer =
         security
     );
 
-server.on("error", error => {
-    console.error(
-        `Gateway server error: ${error?.code || "unknown_error"}`
-    );
+server.on(
+    "error",
+    error => {
+        console.error(
+            `Gateway server error: ${error?.code || "unknown_error"}`
+        );
 
-    if (!server.listening) {
-        process.exitCode = 1;
+        if (!server.listening) {
+            process.exitCode = 1;
+        }
     }
-});
+);
 
 server.listen(
     config.port,
@@ -105,21 +109,29 @@ const shutdown = signal => {
 
     security.replayProtection.clear();
     security.rateLimiter.clear();
+
     security.nodeLifecycleManager.revokeAll();
-    security.sessionLifecycleManager
-        .removeNode("__shutdown__");
+
+    sessionManager.clear();
+    signalingService.clear();
 
     websocketServer.close();
 
-    const shutdownTimeout = setTimeout(
-        () => process.exit(1),
-        config.shutdownTimeoutMs ?? 10000
-    );
+    const shutdownTimeout =
+        setTimeout(
+            () => process.exit(1),
+            config.shutdownTimeoutMs ?? 10000
+        );
 
-    server.close(() => {
-        clearTimeout(shutdownTimeout);
-        process.exit(0);
-    });
+    server.close(
+        () => {
+            clearTimeout(
+                shutdownTimeout
+            );
+
+            process.exit(0);
+        }
+    );
 };
 
 process.on(

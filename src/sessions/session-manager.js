@@ -103,6 +103,10 @@ export class SessionManager {
         }
     }
 
+    clear() {
+        this.sessions.clear();
+    }
+
     count() {
         this.cleanupExpired();
         return this.sessions.size;
