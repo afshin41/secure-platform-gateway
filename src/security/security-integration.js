@@ -1,4 +1,4 @@
-import { SecurityManager } from "./security-manager.js";
+import { SecurityManagerFactory } from "./security-manager-factory.js";
 import { AuthenticationManager } from "./authentication-manager.js";
 import { SecurityAuditManager } from "./security-audit-manager.js";
 import { AuthorizationManager } from "./authorization-manager.js";
@@ -34,7 +34,7 @@ export function createSecurityIntegration(
     }
 
     const securityManager =
-        new SecurityManager(config);
+        SecurityManagerFactory.create(config);
 
     const authenticationManager =
         new AuthenticationManager(
