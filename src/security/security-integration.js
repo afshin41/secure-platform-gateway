@@ -10,6 +10,9 @@ import { SecurityNodeLifecycleManager } from "./security-node-lifecycle-manager.
 import { SecuritySessionLifecycleManager } from "./security-session-lifecycle-manager.js";
 import { SecurityGatewayGuard } from "./security-gateway-guard.js";
 import { SecurityConnectionGuard } from "./security-connection-guard.js";
+import { SecurityRequestGuard } from "./security-request-guard.js";
+import { SecuritySessionGuard } from "./security-session-guard.js";
+import { SecuritySignalingGuard } from "./security-signaling-guard.js";
 
 export function createSecurityIntegration(
     config,
@@ -110,6 +113,30 @@ export function createSecurityIntegration(
             auditManager
         );
 
+    const requestGuard =
+        new SecurityRequestGuard(
+            config,
+            inputValidator,
+            policyManager,
+            rateLimiter
+        );
+
+    const sessionGuard =
+        new SecuritySessionGuard(
+            config,
+            policyManager,
+            authorizationManager,
+            auditManager
+        );
+
+    const signalingGuard =
+        new SecuritySignalingGuard(
+            config,
+            policyManager,
+            authorizationManager,
+            auditManager
+        );
+
     return Object.freeze({
         securityManager,
         authenticationManager,
@@ -122,6 +149,9 @@ export function createSecurityIntegration(
         nodeLifecycleManager,
         sessionLifecycleManager,
         gatewayGuard,
-        connectionGuard
+        connectionGuard,
+        requestGuard,
+        sessionGuard,
+        signalingGuard
     });
 }

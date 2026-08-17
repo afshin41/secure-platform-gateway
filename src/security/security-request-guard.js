@@ -11,13 +11,20 @@ export class SecurityRequestGuard {
 
         if (
             !inputValidator ||
-            typeof inputValidator.nodeId !== "function" ||
-            typeof inputValidator.sessionId !== "function" ||
-            typeof inputValidator.accessToken !== "function"
+            (
+                typeof inputValidator.validateNodeId !== "function" &&
+                typeof inputValidator.nodeId !== "function"
+            ) ||
+            (
+                typeof inputValidator.validateSessionId !== "function" &&
+                typeof inputValidator.sessionId !== "function"
+            ) ||
+            (
+                typeof inputValidator.validateAccessToken !== "function" &&
+                typeof inputValidator.accessToken !== "function"
+            )
         ) {
-            throw new Error(
-                "invalid_input_validator"
-            );
+            throw new Error("invalid_input_validator");
         }
 
         if (
@@ -35,9 +42,7 @@ export class SecurityRequestGuard {
             !rateLimiter ||
             typeof rateLimiter.consume !== "function"
         ) {
-            throw new Error(
-                "invalid_rate_limiter"
-            );
+            throw new Error("invalid_rate_limiter");
         }
 
         this.config = config;
@@ -45,6 +50,93 @@ export class SecurityRequestGuard {
         this.securityPolicyManager =
             securityPolicyManager;
         this.rateLimiter = rateLimiter;
+    }
+
+    validateNodeId(nodeId) {
+        if (
+            typeof this.inputValidator.validateNodeId ===
+            "function"
+        ) {
+            return this.inputValidator.validateNodeId(
+                nodeId
+            );
+        }
+
+        return this.inputValidator.nodeId(nodeId);
+    }
+
+    validateAccessToken(accessToken) {
+        if (
+            typeof this.inputValidator.validateAccessToken ===
+            "function"
+        ) {
+            return this.inputValidator.validateAccessToken(
+                accessToken
+            );
+        }
+
+        return this.inputValidator.accessToken(
+            accessToken
+        );
+    }
+
+    validateSessionId(sessionId) {
+        if (
+            typeof this.inputValidator.validateSessionId ===
+            "function"
+        ) {
+            return this.inputValidator.validateSessionId(
+                sessionId
+            );
+        }
+
+        return this.inputValidator.sessionId(
+            sessionId
+        );
+    }
+
+    validateSignalType(signalType) {
+        if (
+            typeof this.inputValidator.validateSignalType ===
+            "function"
+        ) {
+            return this.inputValidator.validateSignalType(
+                signalType
+            );
+        }
+
+        if (
+            typeof this.inputValidator.signalType ===
+            "function"
+        ) {
+            return this.inputValidator.signalType(
+                signalType
+            );
+        }
+
+        throw new Error("invalid_signal_type");
+    }
+
+    validateSignalPayload(payload) {
+        if (
+            typeof this.inputValidator.validateSignalPayload ===
+            "function"
+        ) {
+            return this.inputValidator.validateSignalPayload(
+                payload
+            );
+        }
+
+        if (
+            typeof this.inputValidator.signalPayload ===
+            "function"
+        ) {
+            return this.inputValidator.signalPayload(
+                payload
+            );
+        }
+
+        throw new Error("invalid_signal_payload");
     }
 
     validateNodeRequest(
@@ -58,10 +150,10 @@ export class SecurityRequestGuard {
             .requireAccessToken();
 
         const validatedNodeId =
-            this.inputValidator.nodeId(nodeId);
+            this.validateNodeId(nodeId);
 
         const validatedAccessToken =
-            this.inputValidator.accessToken(
+            this.validateAccessToken(
                 accessToken
             );
 
@@ -87,7 +179,7 @@ export class SecurityRequestGuard {
             );
 
         const validatedSessionId =
-            this.inputValidator.sessionId(
+            this.validateSessionId(
                 sessionId
             );
 
@@ -112,12 +204,12 @@ export class SecurityRequestGuard {
             );
 
         const validatedSignalType =
-            this.inputValidator.signalType(
+            this.validateSignalType(
                 signalType
             );
 
         const validatedPayload =
-            this.inputValidator.signalPayload(
+            this.validateSignalPayload(
                 payload
             );
 
