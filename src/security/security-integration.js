@@ -28,9 +28,7 @@ export function createSecurityIntegration(
         typeof sessionManager.create !== "function" ||
         typeof sessionManager.isParticipant !== "function"
     ) {
-        throw new Error(
-            "invalid_session_manager"
-        );
+        throw new Error("invalid_session_manager");
     }
 
     const securityManager =
@@ -59,11 +57,9 @@ export function createSecurityIntegration(
         new SecurityRateLimiter({
             ...config,
             securityRateWindowMs:
-                config.securityRateWindowMs ??
-                60 * 1000,
+                config.securityRateWindowMs ?? 60 * 1000,
             securityRateMaxRequests:
-                config.securityRateMaxRequests ??
-                100
+                config.securityRateMaxRequests ?? 100
         });
 
     const inputValidator =
@@ -73,11 +69,9 @@ export function createSecurityIntegration(
         new SecurityReplayProtection({
             ...config,
             securityReplayTtlMs:
-                config.securityReplayTtlMs ??
-                5 * 60 * 1000,
+                config.securityReplayTtlMs ?? 5 * 60 * 1000,
             securityReplayMaxEntries:
-                config.securityReplayMaxEntries ??
-                100000
+                config.securityReplayMaxEntries ?? 100000
         });
 
     const nodeLifecycleManager =

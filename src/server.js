@@ -9,6 +9,7 @@ import { PlatformWebSocketServer } from "./websocket/websocket-server.js";
 import {
     createSecurityIntegration
 } from "./security/security-integration.js";
+import { SecurityLifecycleManager } from "./security/security-lifecycle-manager.js";
 
 validateConfig(config);
 
@@ -27,6 +28,16 @@ const signalingService =
         sessionManager
     );
 
+const securityLifecycle =
+    new SecurityLifecycleManager(
+        config,
+        security,
+        sessionManager,
+        signalingService
+    );
+
+securityLifecycle.start();
+
 let websocketServer;
 
 const httpRouter =
@@ -39,9 +50,7 @@ const httpRouter =
     );
 
 const server =
-    http.createServer(
-        httpRouter
-    );
+    http.createServer(httpRouter);
 
 server.requestTimeout =
     config.httpRequestTimeoutMs ?? 30000;
@@ -86,13 +95,8 @@ server.listen(
             `Listening on ${config.host}:${config.port}`
         );
 
-        console.log(
-            "HTTP endpoint: /health"
-        );
-
-        console.log(
-            "WebSocket endpoint: /"
-        );
+        console.log("HTTP endpoint: /health");
+        console.log("WebSocket endpoint: /");
     }
 );
 
@@ -107,13 +111,7 @@ const shutdown = signal => {
 
     console.log(`Received ${signal}`);
 
-    security.replayProtection.clear();
-    security.rateLimiter.clear();
-
-    security.nodeLifecycleManager.revokeAll();
-
-    sessionManager.clear();
-    signalingService.clear();
+    securityLifecycle.shutdown();
 
     websocketServer.close();
 
@@ -123,15 +121,10 @@ const shutdown = signal => {
             config.shutdownTimeoutMs ?? 10000
         );
 
-    server.close(
-        () => {
-            clearTimeout(
-                shutdownTimeout
-            );
-
-            process.exit(0);
-        }
-    );
+    server.close(() => {
+        clearTimeout(shutdownTimeout);
+        process.exit(0);
+    });
 };
 
 process.on(
