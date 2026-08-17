@@ -1,21 +1,39 @@
-import { sendJson } from "./response.js";
-
 export function createHealthHandler(
     config,
     sessionManager,
-    getNodeCount
+    getNodeCount,
+    getSessionCount = null,
+    getSecurityHealth = null
 ) {
-    return (_request, response) => {
-        sendJson(
-            response,
-            200,
-            {
-                service: config.serverName,
-                version: config.serverVersion,
-                status: "healthy",
-                nodes: getNodeCount(),
-                sessions: sessionManager.count()
-            }
-        );
+    return () => {
+        const result = {
+            status: "healthy",
+            service:
+                config.serverName,
+            version:
+                config.serverVersion,
+            timestamp:
+                Date.now(),
+            nodes:
+                typeof getNodeCount === "function"
+                    ? getNodeCount()
+                    : 0,
+            sessions:
+                typeof getSessionCount === "function"
+                    ? getSessionCount()
+                    : (
+                        sessionManager &&
+                        typeof sessionManager.count === "function"
+                            ? sessionManager.count()
+                            : 0
+                    )
+        };
+
+        if (typeof getSecurityHealth === "function") {
+            result.security =
+                getSecurityHealth();
+        }
+
+        return result;
     };
 }

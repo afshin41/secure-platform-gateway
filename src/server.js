@@ -10,6 +10,7 @@ import {
     createSecurityIntegration
 } from "./security/security-integration.js";
 import { SecurityLifecycleManager } from "./security/security-lifecycle-manager.js";
+import { SecurityHealthManager } from "./security/security-health-manager.js";
 
 validateConfig(config);
 
@@ -38,6 +39,12 @@ const securityLifecycle =
 
 securityLifecycle.start();
 
+const securityHealthManager =
+    new SecurityHealthManager(
+        config,
+        security
+    );
+
 let websocketServer;
 
 const httpRouter =
@@ -46,7 +53,11 @@ const httpRouter =
         sessionManager,
         () =>
             websocketServer
-                ?.getNodeCount() ?? 0
+                ?.getNodeCount() ?? 0,
+        () =>
+            sessionManager.count(),
+        () =>
+            securityHealthManager.getStatus()
     );
 
 const server =

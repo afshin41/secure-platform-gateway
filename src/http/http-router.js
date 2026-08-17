@@ -4,12 +4,15 @@ export function createHttpRouter(
     config,
     sessionManager,
     getNodeCount,
+    getSessionCount = null,
     getSecurityHealth = null
 ) {
     const healthHandler =
         createHealthHandler(
             config,
+            sessionManager,
             getNodeCount,
+            getSessionCount,
             getSecurityHealth
         );
 
