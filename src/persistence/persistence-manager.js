@@ -147,9 +147,22 @@ export class PersistenceManager {
             return false;
         }
 
-        await this.lock.release();
+        let releaseError = null;
 
-        this.initialized = false;
+        try {
+            await this.lock.release();
+        } catch (error) {
+            releaseError = error;
+            this.failed = true;
+            this.lastError = error;
+        } finally {
+            this.initialized = false;
+        }
+
+        if (releaseError) {
+            throw releaseError;
+        }
+
         return true;
     }
 
