@@ -132,10 +132,7 @@ export function createSecurityIntegration(
             auditManager
         );
 
-    const runtimePersistence =
-        new SecurityRuntimePersistence(
-            null
-        );
+    let runtimePersistence = null;
 
     return {
         securityManager,
@@ -168,18 +165,17 @@ export function createSecurityIntegration(
                 securityManager
             );
 
-            this.runtimePersistence =
-                persistence;
+            runtimePersistence = persistence;
 
             return true;
         },
 
         async persistSecurityState() {
-            if (!this.runtimePersistence) {
+            if (!runtimePersistence) {
                 return false;
             }
 
-            await this.runtimePersistence.save(
+            await runtimePersistence.save(
                 securityManager
             );
 
