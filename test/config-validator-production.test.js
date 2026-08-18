@@ -18,6 +18,7 @@ const baseConfig = {
     httpRequestTimeoutMs: 30000,
     httpKeepAliveTimeoutMs: 5000,
     shutdownTimeoutMs: 10000,
+    persistencePath: "./data/persistence",
     serverName: "Secure Platform Gateway",
     serverVersion: "1.0.0",
     enrollmentToken: "production-secret"

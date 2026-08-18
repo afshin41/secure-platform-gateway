@@ -116,6 +116,11 @@ export const validateConfig = (config) => {
         "shutdownTimeoutMs"
     );
 
+    requireNonEmptyString(
+        config.persistencePath,
+        "persistencePath"
+    );
+
     if (
         config.maxWebSocketConnections >
         config.maxNodes

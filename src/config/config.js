@@ -13,6 +13,7 @@ const DEFAULTS = Object.freeze({
     httpHeadersTimeoutMs: 10000,
     httpKeepAliveTimeoutMs: 5000,
     shutdownTimeoutMs: 10000,
+    persistencePath: "./data/persistence",
     environment: "production"
 });
 
@@ -162,6 +163,13 @@ export const config = Object.freeze({
         "SHUTDOWN_TIMEOUT_MS",
         DEFAULTS.shutdownTimeoutMs
     ),
+
+    persistencePath:
+        parseNonEmptyString(
+            process.env.PERSISTENCE_PATH,
+            "PERSISTENCE_PATH",
+            DEFAULTS.persistencePath
+        ),
 
     enrollmentToken:
         process.env.GATEWAY_ENROLLMENT_TOKEN || "",
