@@ -177,6 +177,13 @@ export class FilePersistenceRepository extends PersistenceRepository {
                 );
             }
 
+            if (
+                error instanceof PersistenceError &&
+                error.code === "integrity_error"
+            ) {
+                throw error;
+            }
+
             throw new PersistenceError(
                 "load_failed",
                 "failed to load persistent state",
