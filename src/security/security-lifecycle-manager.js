@@ -25,6 +25,7 @@ export class SecurityLifecycleManager {
         this.security = securityIntegration;
         this.sessionManager = sessionManager;
         this.signalingService = signalingService;
+        this.persistenceManager = null;
         this.started = false;
         this.stopped = false;
     }
@@ -36,6 +37,27 @@ export class SecurityLifecycleManager {
 
         this.started = true;
 
+        return true;
+    }
+
+    async initializePersistence(persistenceManager) {
+        if (!persistenceManager) {
+            throw new Error("invalid_persistence_manager");
+        }
+
+        this.persistenceManager = persistenceManager;
+
+        await this.persistenceManager.initialize();
+
+        return true;
+    }
+
+    async shutdownPersistence() {
+        if (!this.persistenceManager) {
+            return false;
+        }
+
+        await this.persistenceManager.shutdown();
         return true;
     }
 

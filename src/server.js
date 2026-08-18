@@ -11,6 +11,7 @@ import {
 } from "./security/security-integration.js";
 import { SecurityLifecycleManager } from "./security/security-lifecycle-manager.js";
 import { SecurityHealthManager } from "./security/security-health-manager.js";
+import { PersistenceManager } from "./persistence/persistence-manager.js";
 
 validateConfig(config);
 
@@ -38,6 +39,13 @@ const securityLifecycle =
     );
 
 securityLifecycle.start();
+
+const persistenceManager =
+    new PersistenceManager(config);
+
+await securityLifecycle.initializePersistence(
+    persistenceManager
+);
 
 const securityHealthManager =
     new SecurityHealthManager(
@@ -113,7 +121,7 @@ server.listen(
 
 let shuttingDown = false;
 
-const shutdown = signal => {
+const shutdown = async signal => {
     if (shuttingDown) {
         return;
     }
@@ -122,7 +130,7 @@ const shutdown = signal => {
 
     console.log(`Received ${signal}`);
 
-    securityLifecycle.shutdown();
+    await securityLifecycle.shutdown();
 
     websocketServer.close();
 
@@ -140,10 +148,14 @@ const shutdown = signal => {
 
 process.on(
     "SIGTERM",
-    () => shutdown("SIGTERM")
+    () => {
+        void shutdown("SIGTERM");
+    }
 );
 
 process.on(
     "SIGINT",
-    () => shutdown("SIGINT")
+    () => {
+        void shutdown("SIGINT");
+    }
 );
