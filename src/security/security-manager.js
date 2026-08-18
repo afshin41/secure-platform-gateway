@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { TokenRevocationManager } from "./token-revocation-manager.js";
 import { SecurityStateManager } from "./security-state-manager.js";
 import { SecretManager } from "./secret-manager.js";
+import { SecurityPersistenceManager } from "./security-persistence-manager.js";
 
 export class SecurityManager {
     constructor(config) {
@@ -24,6 +25,45 @@ export class SecurityManager {
 
         this.stateManager =
             new SecurityStateManager();
+
+        this.persistenceManager = null;
+        this.persistenceReady = false;
+    }
+
+    async initializePersistence(persistenceManager) {
+        if (!persistenceManager) {
+            throw new Error("invalid_persistence_manager");
+        }
+
+        this.persistenceManager =
+            new SecurityPersistenceManager(
+                persistenceManager
+            );
+
+        await this.persistenceManager.initialize();
+
+        await this.persistenceManager.restore(
+            this
+        );
+
+        this.persistenceReady = true;
+
+        return true;
+    }
+
+    async persistSecurityState() {
+        if (
+            !this.persistenceManager ||
+            !this.persistenceReady
+        ) {
+            return false;
+        }
+
+        await this.persistenceManager.save(
+            this
+        );
+
+        return true;
     }
 
     validateEnrollmentToken(token) {
@@ -88,6 +128,8 @@ export class SecurityManager {
             nodeId,
             "authenticated"
         );
+
+        void this.persistSecurityState();
 
         return {
             accessToken,
@@ -159,6 +201,8 @@ export class SecurityManager {
             nodeId,
             "revoked"
         );
+
+        void this.persistSecurityState();
     }
 
     restoreNode(nodeId) {
@@ -169,12 +213,16 @@ export class SecurityManager {
         this.stateManager.removeState(
             nodeId
         );
+
+        void this.persistSecurityState();
     }
 
     revokeAll() {
         this.revocationManager.clear();
         this.authenticatedNodes.clear();
         this.stateManager.clear();
+
+        void this.persistSecurityState();
     }
 
     count() {

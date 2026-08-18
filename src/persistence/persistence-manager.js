@@ -106,6 +106,30 @@ export class PersistenceManager {
         }
     }
 
+    async restore(securityManager) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        if (!securityManager) {
+            throw new Error("invalid_security_manager");
+        }
+
+        const securityPersistence =
+            securityManager.persistenceManager;
+
+        if (
+            !securityPersistence ||
+            typeof securityPersistence.restore !== "function"
+        ) {
+            return false;
+        }
+
+        return securityPersistence.restore(
+            securityManager
+        );
+    }
+
     async shutdown() {
         if (!this.initialized) {
             return false;

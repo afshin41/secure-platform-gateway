@@ -131,7 +131,7 @@ export function createSecurityIntegration(
             auditManager
         );
 
-    return Object.freeze({
+    return {
         securityManager,
         authenticationManager,
         auditManager,
@@ -146,6 +146,20 @@ export function createSecurityIntegration(
         connectionGuard,
         requestGuard,
         sessionGuard,
-        signalingGuard
-    });
+        signalingGuard,
+
+        async initializePersistence(
+            persistenceManager
+        ) {
+            await securityManager.initializePersistence(
+                persistenceManager
+            );
+
+            return true;
+        },
+
+        async persistSecurityState() {
+            return securityManager.persistSecurityState();
+        }
+    };
 }

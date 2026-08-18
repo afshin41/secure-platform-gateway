@@ -49,6 +49,15 @@ export class SecurityLifecycleManager {
 
         await this.persistenceManager.initialize();
 
+        if (
+            typeof this.security.initializePersistence ===
+            "function"
+        ) {
+            await this.security.initializePersistence(
+                this.persistenceManager
+            );
+        }
+
         return true;
     }
 
