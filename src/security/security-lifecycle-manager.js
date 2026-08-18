@@ -1,3 +1,5 @@
+import { SessionPersistenceManager } from "./session-persistence-manager.js";
+
 export class SecurityLifecycleManager {
     constructor(
         config,
@@ -58,6 +60,17 @@ export class SecurityLifecycleManager {
                 this.persistenceManager
             );
         }
+
+        this.sessionPersistenceManager =
+            new SessionPersistenceManager(
+                this.persistenceManager
+            );
+
+        await this.sessionPersistenceManager.initialize();
+
+        await this.sessionPersistenceManager.restore(
+            this.sessionManager
+        );
 
         return true;
     }
