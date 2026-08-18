@@ -107,10 +107,34 @@ export class FilePersistenceRepository extends PersistenceRepository {
                 }
             );
 
+            const handle =
+                await fs.open(
+                    temporary,
+                    "r"
+                );
+
+            try {
+                await handle.sync();
+            } finally {
+                await handle.close();
+            }
+
             await fs.rename(
                 temporary,
                 file
             );
+
+            const directoryHandle =
+                await fs.open(
+                    this.directory,
+                    "r"
+                );
+
+            try {
+                await directoryHandle.sync();
+            } finally {
+                await directoryHandle.close();
+            }
 
             return true;
         } catch (error) {
