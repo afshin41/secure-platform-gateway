@@ -16,16 +16,28 @@ export class SecurityRuntimePersistence {
             new SecurityAuditPersistenceManager(
                 persistenceManager
             );
+
+        this.initialized = false;
     }
 
     async initialize() {
+        if (this.initialized) {
+            return true;
+        }
+
         await this.securityPersistence.initialize();
         await this.auditPersistence.initialize();
+
+        this.initialized = true;
 
         return true;
     }
 
     async restore(securityManager) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
         await this.securityPersistence.restore(
             securityManager
         );
@@ -38,6 +50,10 @@ export class SecurityRuntimePersistence {
     }
 
     async save(securityManager) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
         await this.securityPersistence.save(
             securityManager
         );
@@ -50,7 +66,13 @@ export class SecurityRuntimePersistence {
     }
 
     async shutdown(securityManager) {
+        if (!this.initialized) {
+            return false;
+        }
+
         await this.save(securityManager);
+
+        this.initialized = false;
 
         return true;
     }
