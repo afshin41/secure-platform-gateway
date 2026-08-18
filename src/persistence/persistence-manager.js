@@ -40,6 +40,11 @@ export class PersistenceManager {
         } catch (error) {
             this.failed = true;
             this.lastError = error;
+
+            if (this.lock?.locked) {
+                await this.lock.release().catch(() => {});
+            }
+
             throw error;
         }
     }
