@@ -4,6 +4,10 @@ import crypto from "node:crypto";
 
 import { PersistenceRepository } from "./persistence-repository.js";
 import { PersistenceError } from "./persistence-error.js";
+import {
+    createIntegrityDigest,
+    verifyIntegrity
+} from "./persistence-integrity.js";
 
 const KEY_PATTERN = /^[A-Za-z0-9._-]+$/;
 
@@ -82,7 +86,11 @@ export class FilePersistenceRepository extends PersistenceRepository {
         let payload;
 
         try {
-            payload = JSON.stringify(value);
+            payload = JSON.stringify({
+                version: 1,
+                data: value,
+                integrity: createIntegrityDigest(value)
+            });
 
             if (payload === undefined) {
                 throw new Error("non_serializable_value");
@@ -137,7 +145,23 @@ export class FilePersistenceRepository extends PersistenceRepository {
                     "utf8"
                 );
 
-            return JSON.parse(payload);
+            const record = JSON.parse(payload);
+
+            if (
+                !record ||
+                record.version !== 1 ||
+                !verifyIntegrity(
+                    record.data,
+                    record.integrity
+                )
+            ) {
+                throw new PersistenceError(
+                    "integrity_error",
+                    "persistent state integrity validation failed"
+                );
+            }
+
+            return record.data;
         } catch (error) {
             if (error?.code === "ENOENT") {
                 return null;
