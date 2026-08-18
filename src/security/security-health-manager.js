@@ -10,6 +10,22 @@ export class SecurityHealthManager {
 
         this.config = config;
         this.security = security;
+        this.persistenceHealthManager = null;
+    }
+
+    setPersistenceHealthManager(
+        persistenceHealthManager
+    ) {
+        if (!persistenceHealthManager) {
+            throw new Error(
+                "invalid_persistence_health_manager"
+            );
+        }
+
+        this.persistenceHealthManager =
+            persistenceHealthManager;
+
+        return true;
     }
 
     getStatus() {
@@ -35,8 +51,21 @@ export class SecurityHealthManager {
             replayEntries >= 0 &&
             auditEvents >= 0;
 
+        const persistence =
+            this.persistenceHealthManager
+                ? this.persistenceHealthManager.getStatus()
+                : {
+                    status: "ok",
+                    initialized: false,
+                    healthy: true,
+                    lastError: null
+                };
+
+        const overallHealthy =
+            healthy && persistence.status === "ok";
+
         return {
-            status: healthy ? "ok" : "degraded",
+            status: overallHealthy ? "ok" : "degraded",
             security: {
                 authenticatedNodes,
                 activeConnections,
@@ -44,6 +73,7 @@ export class SecurityHealthManager {
                 replayEntries,
                 auditEvents
             },
+            persistence,
             timestamp: Date.now()
         };
     }
