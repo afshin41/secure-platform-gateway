@@ -1,3 +1,4 @@
+import { SecurityRuntimePersistence } from "./security-runtime-persistence.js";
 import { SecurityManagerFactory } from "./security-manager-factory.js";
 import { AuthenticationManager } from "./authentication-manager.js";
 import { SecurityAuditManager } from "./security-audit-manager.js";
@@ -131,6 +132,11 @@ export function createSecurityIntegration(
             auditManager
         );
 
+    const runtimePersistence =
+        new SecurityRuntimePersistence(
+            null
+        );
+
     return {
         securityManager,
         authenticationManager,
@@ -147,19 +153,37 @@ export function createSecurityIntegration(
         requestGuard,
         sessionGuard,
         signalingGuard,
+        runtimePersistence,
 
         async initializePersistence(
             persistenceManager
         ) {
-            await securityManager.initializePersistence(
-                persistenceManager
+            const persistence =
+                new SecurityRuntimePersistence(
+                    persistenceManager
+                );
+
+            await persistence.initialize();
+            await persistence.restore(
+                securityManager
             );
+
+            this.runtimePersistence =
+                persistence;
 
             return true;
         },
 
         async persistSecurityState() {
-            return securityManager.persistSecurityState();
+            if (!this.runtimePersistence) {
+                return false;
+            }
+
+            await this.runtimePersistence.save(
+                securityManager
+            );
+
+            return true;
         }
     };
 }
