@@ -1,5 +1,6 @@
 import { PersistenceError } from "./persistence-error.js";
 import { FilePersistenceRepository } from "./file-persistence-repository.js";
+import { PersistenceLock } from "./persistence-lock.js";
 
 const RUNTIME_KEY = "gateway-runtime";
 
@@ -14,6 +15,10 @@ export class PersistenceManager {
             repository ||
             new FilePersistenceRepository(config);
 
+        this.lock = new PersistenceLock(
+            config.persistencePath
+        );
+
         this.initialized = false;
         this.failed = false;
         this.lastError = null;
@@ -26,6 +31,8 @@ export class PersistenceManager {
 
         try {
             await this.repository.initialize();
+            await this.lock.acquire();
+
             this.initialized = true;
             this.failed = false;
             this.lastError = null;
@@ -134,6 +141,8 @@ export class PersistenceManager {
         if (!this.initialized) {
             return false;
         }
+
+        await this.lock.release();
 
         this.initialized = false;
         return true;
