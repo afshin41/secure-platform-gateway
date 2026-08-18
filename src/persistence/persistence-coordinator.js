@@ -1,0 +1,90 @@
+export class PersistenceCoordinator {
+    constructor(
+        securityPersistenceManager,
+        sessionPersistenceManager
+    ) {
+        if (
+            !securityPersistenceManager ||
+            !sessionPersistenceManager
+        ) {
+            throw new Error(
+                "invalid_persistence_managers"
+            );
+        }
+
+        this.securityPersistence =
+            securityPersistenceManager;
+
+        this.sessionPersistence =
+            sessionPersistenceManager;
+
+        this.initialized = false;
+    }
+
+    async initialize(
+        securityManager,
+        sessionManager
+    ) {
+        if (!securityManager) {
+            throw new Error("invalid_security_manager");
+        }
+
+        if (!sessionManager) {
+            throw new Error("invalid_session_manager");
+        }
+
+        await this.securityPersistence.initialize();
+        await this.sessionPersistence.initialize();
+
+        await this.securityPersistence.restore(
+            securityManager
+        );
+
+        await this.sessionPersistence.restore(
+            sessionManager
+        );
+
+        this.initialized = true;
+
+        return true;
+    }
+
+    async save(
+        securityManager,
+        sessionManager
+    ) {
+        if (!this.initialized) {
+            throw new Error(
+                "persistence_not_initialized"
+            );
+        }
+
+        await this.securityPersistence.save(
+            securityManager
+        );
+
+        await this.sessionPersistence.save(
+            sessionManager
+        );
+
+        return true;
+    }
+
+    async shutdown(
+        securityManager,
+        sessionManager
+    ) {
+        if (!this.initialized) {
+            return false;
+        }
+
+        await this.save(
+            securityManager,
+            sessionManager
+        );
+
+        this.initialized = false;
+
+        return true;
+    }
+}
