@@ -26,6 +26,7 @@ export class SecurityLifecycleManager {
         this.sessionManager = sessionManager;
         this.signalingService = signalingService;
         this.persistenceManager = null;
+        this.sessionPersistenceManager = null;
         this.started = false;
         this.stopped = false;
     }
