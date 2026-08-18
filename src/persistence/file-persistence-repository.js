@@ -124,6 +124,11 @@ export class FilePersistenceRepository extends PersistenceRepository {
                 file
             );
 
+            await fs.chmod(
+                file,
+                0o600
+            );
+
             const directoryHandle =
                 await fs.open(
                     this.directory,
