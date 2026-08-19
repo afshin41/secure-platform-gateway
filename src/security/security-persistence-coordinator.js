@@ -137,11 +137,18 @@ export class SecurityPersistenceCoordinator {
             return false;
         }
 
-        await this.save(
-            securityManager,
-            auditManager,
-            sessionManager
-        );
+        const saved =
+            await this.save(
+                securityManager,
+                auditManager,
+                sessionManager
+            );
+
+        if (saved !== true) {
+            throw new Error(
+                "security_persistence_shutdown_failed"
+            );
+        }
 
         this.initialized = false;
 
