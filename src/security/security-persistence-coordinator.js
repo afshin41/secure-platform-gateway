@@ -66,17 +66,38 @@ export class SecurityPersistenceCoordinator {
             );
         }
 
-        await this.runtime.save(
-            securityManager
-        );
+        const runtimeSaved =
+            await this.runtime.save(
+                securityManager
+            );
 
-        await this.audit.save(
-            auditManager
-        );
+        if (runtimeSaved !== true) {
+            throw new Error(
+                "security_runtime_persistence_failed"
+            );
+        }
 
-        await this.session.save(
-            sessionManager
-        );
+        const auditSaved =
+            await this.audit.save(
+                auditManager
+            );
+
+        if (auditSaved !== true) {
+            throw new Error(
+                "security_audit_persistence_failed"
+            );
+        }
+
+        const sessionSaved =
+            await this.session.save(
+                sessionManager
+            );
+
+        if (sessionSaved !== true) {
+            throw new Error(
+                "security_session_persistence_failed"
+            );
+        }
 
         return true;
     }
