@@ -1,81 +1,97 @@
 import { PersistenceError } from "./persistence-error.js";
 
+const RECOVERY_KEY = "gateway-recovery";
+
 export class PersistenceRecoveryManager {
     constructor(persistenceManager) {
         if (
             !persistenceManager ||
             typeof persistenceManager.initialize !== "function" ||
-            typeof persistenceManager.repository?.load !== "function"
+            !persistenceManager.repository ||
+            typeof persistenceManager.repository.save !== "function" ||
+            typeof persistenceManager.repository.load !== "function"
         ) {
             throw new Error("invalid_persistence_manager");
         }
 
         this.persistence = persistenceManager;
-        this.recovered = false;
-        this.lastError = null;
     }
 
     async initialize() {
-        try {
-            await this.persistence.initialize();
+        await this.persistence.initialize();
 
-            this.recovered = false;
-            this.lastError = null;
-
-            return true;
-        } catch (error) {
-            this.lastError = error;
-            throw error;
+        if (!this.persistence.initialized) {
+            throw new Error("persistence_initialization_failed");
         }
+
+        return true;
     }
 
-    async recover(key, restore) {
-        if (typeof key !== "string" || key.length === 0) {
+    async save(state) {
+        if (!this.persistence.initialized) {
+            throw new Error("persistence_not_initialized");
+        }
+
+        if (!state || typeof state !== "object") {
             throw new PersistenceError(
-                "invalid_recovery_key",
-                "invalid recovery key"
+                "invalid_recovery_state",
+                "invalid recovery state"
             );
         }
 
-        if (typeof restore !== "function") {
-            throw new Error("invalid_restore_handler");
-        }
-
-        try {
-            const record =
-                await this.persistence.repository.load(key);
-
-            if (record === null) {
-                this.recovered = true;
-                this.lastError = null;
-                return false;
+        await this.persistence.repository.save(
+            RECOVERY_KEY,
+            {
+                version: 1,
+                updatedAt: Date.now(),
+                state: { ...state }
             }
+        );
 
-            await restore(record);
-
-            this.recovered = true;
-            this.lastError = null;
-
-            return true;
-        } catch (error) {
-            this.recovered = false;
-            this.lastError = error;
-            throw error;
-        }
+        return true;
     }
 
-    getStatus() {
+    async load() {
+        if (!this.persistence.initialized) {
+            throw new Error("persistence_not_initialized");
+        }
+
+        const record =
+            await this.persistence.repository.load(
+                RECOVERY_KEY
+            );
+
+        if (record === null) {
+            return null;
+        }
+
+        if (
+            !record ||
+            record.version !== 1 ||
+            !record.state ||
+            typeof record.state !== "object" ||
+            Array.isArray(record.state)
+        ) {
+            throw new PersistenceError(
+                "invalid_recovery_state",
+                "invalid persisted recovery state"
+            );
+        }
+
         return {
-            recovered: this.recovered,
-            healthy: this.lastError === null,
-            lastError: this.lastError
-                ? {
-                    name: this.lastError.name,
-                    code:
-                        this.lastError.code ||
-                        "unknown_error"
-                }
-                : null
+            ...record.state
         };
+    }
+
+    async clear() {
+        if (!this.persistence.initialized) {
+            throw new Error("persistence_not_initialized");
+        }
+
+        await this.persistence.repository.delete(
+            RECOVERY_KEY
+        );
+
+        return true;
     }
 }
