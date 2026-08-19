@@ -29,6 +29,10 @@ export class PersistenceManager {
             return true;
         }
 
+        if (this.failed) {
+            this.lastError = null;
+        }
+
         try {
             await this.repository.initialize();
             await this.lock.acquire();
