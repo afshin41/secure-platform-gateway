@@ -64,19 +64,13 @@ export class PersistenceRecoveryCoordinator {
                 );
 
             if (!handler) {
-                throw new Error(
-                    `unhandled_recovery_operation:${entry.operation}`
-                );
+                continue;
             }
 
             await handler(
                 entry.payload,
                 context
             );
-        }
-
-        if (entries.length > 0) {
-            await this.journal.clear();
         }
 
         return entries.length;
