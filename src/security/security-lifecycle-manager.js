@@ -93,8 +93,19 @@ export class SecurityLifecycleManager {
         this.security.rateLimiter.clear();
         this.security.nodeLifecycleManager.revokeAll();
 
-        this.sessionManager.clear();
-        this.signalingService.clear();
+        if (
+            this.sessionManager &&
+            typeof this.sessionManager.clear === "function"
+        ) {
+            this.sessionManager.clear();
+        }
+
+        if (
+            this.signalingService &&
+            typeof this.signalingService.clear === "function"
+        ) {
+            this.signalingService.clear();
+        }
 
         this.started = false;
         this.stopped = true;
