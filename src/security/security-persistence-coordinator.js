@@ -70,13 +70,17 @@ export class SecurityPersistenceCoordinator {
             securityManager
         );
 
-        await this.audit.save(
-            auditManager
-        );
+        try {
+            await this.audit.save(
+                auditManager
+            );
 
-        await this.session.save(
-            sessionManager
-        );
+            await this.session.save(
+                sessionManager
+            );
+        } catch (error) {
+            throw error;
+        }
 
         return true;
     }
