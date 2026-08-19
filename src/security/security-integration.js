@@ -152,6 +152,7 @@ export function createSecurityIntegration(
         sessionGuard,
         signalingGuard,
         runtimePersistence,
+        auditPersistence,
 
         async initializePersistence(
             persistenceManager
