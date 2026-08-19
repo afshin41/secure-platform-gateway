@@ -54,6 +54,13 @@ export class PersistenceManager {
             await this.initialize();
         }
 
+        if (!this.initialized) {
+            throw new PersistenceError(
+                "persistence_not_initialized",
+                "persistence manager is not initialized"
+            );
+        }
+
         if (!state || typeof state !== "object") {
             throw new PersistenceError(
                 "invalid_runtime_state",
@@ -85,6 +92,13 @@ export class PersistenceManager {
     async loadRuntimeState() {
         if (!this.initialized) {
             await this.initialize();
+        }
+
+        if (!this.initialized) {
+            throw new PersistenceError(
+                "persistence_not_initialized",
+                "persistence manager is not initialized"
+            );
         }
 
         try {
