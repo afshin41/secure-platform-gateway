@@ -1,4 +1,5 @@
 import { SecurityRuntimePersistence } from "./security-runtime-persistence.js";
+import { SecurityAuditPersistence } from "./security-audit-persistence.js";
 import { SecurityManagerFactory } from "./security-manager-factory.js";
 import { AuthenticationManager } from "./authentication-manager.js";
 import { SecurityAuditManager } from "./security-audit-manager.js";
