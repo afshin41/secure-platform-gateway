@@ -86,4 +86,51 @@ export class PersistenceRecoveryCoordinator {
         await this.journal.clear();
         return true;
     }
+
+    async complete(operationId) {
+        if (!this.initialized) {
+            throw new Error(
+                "recovery_not_initialized"
+            );
+        }
+
+        if (
+            typeof operationId !== "string" ||
+            operationId.length === 0
+        ) {
+            throw new Error(
+                "invalid_recovery_operation_id"
+            );
+        }
+
+        const entries =
+            await this.journal.load();
+
+        const remaining =
+            entries.filter(
+                entry => entry.id !== operationId
+            );
+
+        if (
+            remaining.length ===
+            entries.length
+        ) {
+            return false;
+        }
+
+        if (remaining.length === 0) {
+            await this.journal.clear();
+            return true;
+        }
+
+        await this.journal.persistence.repository.save(
+            "gateway-recovery-journal",
+            {
+                version: 1,
+                entries: remaining
+            }
+        );
+
+        return true;
+    }
 }
