@@ -1,6 +1,7 @@
 import { PersistenceError } from "./persistence-error.js";
 import { FilePersistenceRepository } from "./file-persistence-repository.js";
 import { PersistenceLock } from "./persistence-lock.js";
+import { PersistenceRecoveryCoordinator } from "./persistence-recovery-coordinator.js";
 
 const RUNTIME_KEY = "gateway-runtime";
 
@@ -18,6 +19,11 @@ export class PersistenceManager {
         this.lock = new PersistenceLock(
             config.persistencePath
         );
+
+        this.recovery =
+            new PersistenceRecoveryCoordinator(
+                this
+            );
 
         this.initialized = false;
         this.failed = false;
@@ -38,6 +44,9 @@ export class PersistenceManager {
             await this.lock.acquire();
 
             this.initialized = true;
+
+            await this.recovery.initialize();
+
             this.failed = false;
             this.lastError = null;
             return true;
@@ -51,6 +60,35 @@ export class PersistenceManager {
 
             throw error;
         }
+    }
+
+    async recordRecovery(operation, payload = {}) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        return this.recovery.record(
+            operation,
+            payload
+        );
+    }
+
+    async recover(context) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        return this.recovery.recover(
+            context
+        );
+    }
+
+    async clearRecovery() {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        return this.recovery.clear();
     }
 
     async saveRuntimeState(state) {
