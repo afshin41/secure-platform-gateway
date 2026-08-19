@@ -25,21 +25,30 @@ export class SecurityPersistenceCoordinator {
         auditManager,
         sessionManager
     ) {
+        if (this.initialized) {
+            return true;
+        }
+
         await this.runtime.initialize();
         await this.audit.initialize();
         await this.session.initialize();
 
-        await this.runtime.restore(
-            securityManager
-        );
+        try {
+            await this.runtime.restore(
+                securityManager
+            );
 
-        await this.audit.restore(
-            auditManager
-        );
+            await this.audit.restore(
+                auditManager
+            );
 
-        await this.session.restore(
-            sessionManager
-        );
+            await this.session.restore(
+                sessionManager
+            );
+        } catch (error) {
+            this.initialized = false;
+            throw error;
+        }
 
         this.initialized = true;
 
