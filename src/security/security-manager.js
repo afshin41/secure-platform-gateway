@@ -129,7 +129,9 @@ export class SecurityManager {
             "authenticated"
         );
 
-        void this.persistSecurityState();
+        if (this.persistenceReady) {
+            void this.persistSecurityState();
+        }
 
         return {
             accessToken,
@@ -202,7 +204,9 @@ export class SecurityManager {
             "revoked"
         );
 
-        void this.persistSecurityState();
+        if (this.persistenceReady) {
+            void this.persistSecurityState();
+        }
     }
 
     restoreNode(nodeId) {
@@ -214,7 +218,9 @@ export class SecurityManager {
             nodeId
         );
 
-        void this.persistSecurityState();
+        if (this.persistenceReady) {
+            void this.persistSecurityState();
+        }
     }
 
     revokeAll() {
@@ -222,7 +228,9 @@ export class SecurityManager {
         this.authenticatedNodes.clear();
         this.stateManager.clear();
 
-        void this.persistSecurityState();
+        if (this.persistenceReady) {
+            void this.persistSecurityState();
+        }
     }
 
     count() {
