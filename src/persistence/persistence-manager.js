@@ -91,6 +91,16 @@ export class PersistenceManager {
         return this.recovery.clear();
     }
 
+    async completeRecovery(operationId) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        return this.recovery.complete(
+            operationId
+        );
+    }
+
     async saveRuntimeState(state) {
         if (!this.initialized) {
             await this.initialize();
