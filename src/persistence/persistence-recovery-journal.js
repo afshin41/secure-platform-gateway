@@ -82,7 +82,11 @@ export class PersistenceRecoveryJournal {
             }
         );
 
-        return entry.id;
+        return {
+            id: entry.id,
+            operation: entry.operation,
+            createdAt: entry.createdAt
+        };
     }
 
     async load() {
