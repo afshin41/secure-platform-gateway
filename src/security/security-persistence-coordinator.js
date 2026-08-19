@@ -1,57 +1,43 @@
 export class SecurityPersistenceCoordinator {
-    constructor(
-        securityPersistenceManager,
-        sessionPersistenceManager
-    ) {
+    constructor({
+        runtimePersistence,
+        auditPersistence,
+        sessionPersistence
+    }) {
         if (
-            !securityPersistenceManager ||
-            typeof securityPersistenceManager.save !== "function" ||
-            typeof securityPersistenceManager.restore !== "function"
+            !runtimePersistence ||
+            !auditPersistence ||
+            !sessionPersistence
         ) {
             throw new Error(
-                "invalid_security_persistence_manager"
+                "invalid_security_persistence"
             );
         }
 
-        if (
-            !sessionPersistenceManager ||
-            typeof sessionPersistenceManager.save !== "function" ||
-            typeof sessionPersistenceManager.restore !== "function"
-        ) {
-            throw new Error(
-                "invalid_session_persistence_manager"
-            );
-        }
-
-        this.securityPersistence =
-            securityPersistenceManager;
-
-        this.sessionPersistence =
-            sessionPersistenceManager;
-
+        this.runtime = runtimePersistence;
+        this.audit = auditPersistence;
+        this.session = sessionPersistence;
         this.initialized = false;
     }
 
     async initialize(
         securityManager,
+        auditManager,
         sessionManager
     ) {
-        if (!securityManager) {
-            throw new Error("invalid_security_manager");
-        }
+        await this.runtime.initialize();
+        await this.audit.initialize();
+        await this.session.initialize();
 
-        if (!sessionManager) {
-            throw new Error("invalid_session_manager");
-        }
-
-        await this.securityPersistence.initialize();
-        await this.sessionPersistence.initialize();
-
-        await this.securityPersistence.restore(
+        await this.runtime.restore(
             securityManager
         );
 
-        await this.sessionPersistence.restore(
+        await this.audit.restore(
+            auditManager
+        );
+
+        await this.session.restore(
             sessionManager
         );
 
@@ -62,19 +48,24 @@ export class SecurityPersistenceCoordinator {
 
     async save(
         securityManager,
+        auditManager,
         sessionManager
     ) {
         if (!this.initialized) {
             throw new Error(
-                "persistence_coordinator_not_initialized"
+                "security_persistence_not_initialized"
             );
         }
 
-        await this.securityPersistence.save(
+        await this.runtime.save(
             securityManager
         );
 
-        await this.sessionPersistence.save(
+        await this.audit.save(
+            auditManager
+        );
+
+        await this.session.save(
             sessionManager
         );
 
@@ -83,6 +74,7 @@ export class SecurityPersistenceCoordinator {
 
     async shutdown(
         securityManager,
+        auditManager,
         sessionManager
     ) {
         if (!this.initialized) {
@@ -91,15 +83,12 @@ export class SecurityPersistenceCoordinator {
 
         await this.save(
             securityManager,
+            auditManager,
             sessionManager
         );
 
         this.initialized = false;
 
         return true;
-    }
-
-    isInitialized() {
-        return this.initialized;
     }
 }
