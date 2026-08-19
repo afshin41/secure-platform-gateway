@@ -1,3 +1,5 @@
+import { PersistenceRecoveryManager } from "./persistence-recovery-manager.js";
+
 export class PersistenceOrchestrator {
     constructor(
         persistenceManager,
@@ -45,6 +47,7 @@ export class PersistenceOrchestrator {
         await this.security.initialize();
         await this.sessions.initialize();
         await this.audit.initialize();
+        await this.recovery.initialize();
 
         await this.security.restore(
             securityManager
@@ -66,7 +69,8 @@ export class PersistenceOrchestrator {
     async save(
         securityManager,
         sessionManager,
-        auditManager
+        auditManager,
+        recoveryState = null
     ) {
         if (!this.initialized) {
             throw new Error(
@@ -85,6 +89,12 @@ export class PersistenceOrchestrator {
         await this.audit.save(
             auditManager
         );
+
+        if (recoveryState !== null) {
+            await this.recovery.save(
+                recoveryState
+            );
+        }
 
         return true;
     }
