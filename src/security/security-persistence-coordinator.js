@@ -72,6 +72,32 @@ export class SecurityPersistenceCoordinator {
         return true;
     }
 
+    async restore(
+        securityManager,
+        auditManager,
+        sessionManager
+    ) {
+        if (!this.initialized) {
+            throw new Error(
+                "security_persistence_not_initialized"
+            );
+        }
+
+        await this.runtime.restore(
+            securityManager
+        );
+
+        await this.audit.restore(
+            auditManager
+        );
+
+        await this.session.restore(
+            sessionManager
+        );
+
+        return true;
+    }
+
     async shutdown(
         securityManager,
         auditManager,
