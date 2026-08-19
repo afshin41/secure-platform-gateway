@@ -20,6 +20,12 @@ export class PersistenceRecoveryCoordinator {
             throw new Error("invalid_recovery_handler");
         }
 
+        if (this.handlers.has(operation)) {
+            throw new Error(
+                `recovery_handler_already_registered:${operation}`
+            );
+        }
+
         this.handlers.set(
             operation,
             handler
