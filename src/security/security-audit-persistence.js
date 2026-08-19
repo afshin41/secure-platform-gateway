@@ -36,7 +36,12 @@ export class SecurityAuditPersistence {
             throw new Error("invalid_audit_manager");
         }
 
-        const events = auditManager.events;
+        const events =
+            Array.isArray(auditManager.events)
+                ? auditManager.events
+                : Array.isArray(auditManager.auditEvents)
+                    ? auditManager.auditEvents
+                    : null;
 
         if (!Array.isArray(events)) {
             throw new PersistenceError(
@@ -88,14 +93,21 @@ export class SecurityAuditPersistence {
             );
         }
 
-        if (!Array.isArray(auditManager.events)) {
+        const events =
+            Array.isArray(auditManager.events)
+                ? auditManager.events
+                : Array.isArray(auditManager.auditEvents)
+                    ? auditManager.auditEvents
+                    : null;
+
+        if (!Array.isArray(events)) {
             throw new PersistenceError(
                 "invalid_audit_state",
                 "invalid audit event storage"
             );
         }
 
-        auditManager.events.length = 0;
+        events.length = 0;
 
         for (const event of record.events) {
             if (
@@ -109,7 +121,7 @@ export class SecurityAuditPersistence {
                 );
             }
 
-            auditManager.events.push({
+            events.push({
                 ...event
             });
         }
